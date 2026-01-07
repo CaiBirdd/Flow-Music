@@ -1,58 +1,82 @@
 ﻿<script lang="ts" setup>
 import { toggleImg } from '@/utils'
 import type { LyricLine } from '@/utils/lyric'
-import { computed, nextTick, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import gsap from 'gsap'
 import { useRouter } from 'vue-router'
 import { useFlags } from '@/store/flags'
 
+/**
+ * LyricDisplay 组件
+ *
+ * 作用：
+ * 1. 音乐详情页的核心容器，展示歌曲信息（标题、歌手）。
+ * 2. 处理封面图的平滑切换与缩放动画 (GSAP)。
+ * 3. 作为歌词渲染的"宿主"容器 (.lyric-container)，实际歌词逻辑由 MusicPlayer 组件挂载。
+ * 4. 极致的性能优化：包含休眠机制、硬件加速、防竞态处理。
+ */
+
 interface Props {
-  lyric: LyricLine[]
-  title: string
-  bg?: string
-  isBlur?: boolean
-  ar: any[]
-  videoPlayUrl: string | null
+  lyric: LyricLine[] // 歌词数据（虽然本组件不直接用，但用来判断是否显示）
+  title: string // 歌名
+  bg?: string // 封面图 URL
+  isBlur?: boolean // 是否开启背景模糊（用于性能降级）
+  ar: any[] // 歌手数组
+  videoPlayUrl: string | null // 动态视频封面 URL
 }
+
+// 默认 Props 设置
 const props = withDefaults(defineProps<Props>(), {
   isBlur: true
 })
+
 const router = useRouter()
-const flash = useFlags()
+const flash = useFlags() // 全局状态：用于检测详情页是否打开
+
+// 视频元素引用
 const videoCover = useTemplateRef<HTMLVideoElement>('videoCover')
 
 // GSAP动画实例，用于清理上一个动画防止累积
+// 必须在组件卸载或切歌时清理，否则会造成内存泄漏和动画冲突
 let currentTimeline: gsap.core.Timeline | null = null
 
 // 保存 DOM 引用，供唤醒时使用
-let bgElRef: HTMLDivElement | null = null
-let coverElRef: HTMLDivElement | null = null
+// 使用 useTemplateRef (Vue 3.5+) 替代 document.querySelector，更安全且符合组件化原则
+const bgElRef = useTemplateRef<HTMLDivElement>('bgElRef') // 封面容器（负责尺寸动画）
 
-// 用于追踪当前加载的图片URL，防止竞态条件
+// 优化：使用响应式样式替代直接的 DOM 操作
+// 这样更符合 Vue 的声明式编程范式，也无需维护 coverElRef
+const coverImage = ref('')
+
+// 用于追踪当前加载的图片URL，防止竞态条件 (Race Condition)
+// 场景：用户快速切换 A -> B -> C，如果 A 的图片加载很慢，最后才回来，会导致封面显示错误。
 let currentLoadingBg: string | null = null
 
 /**
  * 执行封面动画和图片加载
  * @param val 图片URL
- * @param immediate 是否立即显示（跳过缩小动画）
+ * @param immediate 是否立即显示
+ *    - false (切歌时): 执行 "缩小 -> 加载 -> 放大" 的完整动画
+ *    - true (唤醒时): 直接显示最终状态，跳过动画，避免用户感到拖沓
  */
 const executeCoverAnimation = (val: string, immediate: boolean = false) => {
-  if (!bgElRef || !val) return
+  if (!bgElRef.value || !val) return
 
-  // 记录当前正在加载的图片URL，用于竞态条件检测
+  // 1. 锁定当前请求 ID
   currentLoadingBg = val
 
-  // 清理上一个动画，防止动画累积
+  // 2. 清理旧动画
   if (currentTimeline) {
     currentTimeline.kill()
   }
 
-  // 创建一个 GSAP 时间轴
+  // 3. 创建新的 GSAP 时间轴
   currentTimeline = gsap.timeline()
 
+  // 4. 如果不是立即显示，先执行"缩小"动画 (10vh)
+  // 这会给用户一种"旧碟片收回去，新碟片拿出来"的视觉暗示
   if (!immediate) {
-    // 使用时间轴先缩小元素
-    currentTimeline.to(bgElRef, {
+    currentTimeline.to(bgElRef.value, {
       height: '10vh',
       width: '10vh',
       duration: 0.3,
@@ -61,11 +85,12 @@ const executeCoverAnimation = (val: string, immediate: boolean = false) => {
     })
   }
 
+  // 5. 异步加载图片
   toggleImg(val, '600y600').then((img) => {
     /**
-     * 【竞态条件检测】
-     * 如果异步加载完成时，currentLoadingBg 已经变了，
-     * 说明用户又切歌了，当前这次加载结果应该被丢弃
+     * 【竞态条件防御】
+     * 关键检查：图片加载回来了，但 currentLoadingBg 还是我当初请求的那个吗？
+     * 如果不是，说明在加载期间用户又切歌了，直接丢弃这次结果。
      */
     if (currentLoadingBg !== val) {
       return
@@ -74,27 +99,27 @@ const executeCoverAnimation = (val: string, immediate: boolean = false) => {
     if (!currentTimeline) return
 
     /**
-     * 【immediate 模式优化】
-     * 当 immediate=true 时，直接设置背景图，不依赖 GSAP 的 onStart 回调
-     * 因为 duration=0 时 onStart 的执行时机可能不稳定
+     * 【唤醒模式 / Immediate 优化】
+     * 如果是唤醒模式，不需要动画，直接啪一下把图贴上去，尺寸设为最大。
      */
-    if (immediate && coverElRef && !props.videoPlayUrl) {
-      coverElRef.style.backgroundImage = `url(${img.src})`
-      // 确保尺寸正确
-      bgElRef!.style.height = '45vh'
-      bgElRef!.style.width = '45vh'
+    if (immediate && !props.videoPlayUrl) {
+      coverImage.value = `url(${img.src})`
+      bgElRef.value!.style.height = '45vh'
+      bgElRef.value!.style.width = '45vh'
       return
     }
 
-    currentTimeline.to(bgElRef, {
+    // 6. 执行"放大"动画 (45vh) 并设置背景图
+    currentTimeline.to(bgElRef.value, {
       height: '45vh',
       width: '45vh',
       duration: 0.3,
       ease: 'power1.out',
       transformOrigin: 'center',
       onStart: () => {
-        if (!props.videoPlayUrl && coverElRef) {
-          coverElRef.style.backgroundImage = `url(${img.src})`
+        // 在动画开始的一瞬间设置背景图，确保放大的过程是有图的
+        if (!props.videoPlayUrl) {
+          coverImage.value = `url(${img.src})`
         }
       }
     })
@@ -102,9 +127,6 @@ const executeCoverAnimation = (val: string, immediate: boolean = false) => {
 }
 
 nextTick(() => {
-  bgElRef = document.querySelector('.cover-container') as HTMLDivElement
-  coverElRef = document.querySelector('.img-cover') as HTMLDivElement
-
   // 监听播放状态，控制视频封面播放/暂停
   watch(
     () => window.$audio?.isPlay,
@@ -120,20 +142,26 @@ nextTick(() => {
     }
   )
 
+  /**
+   * 监听封面 URL 变化 (即 切歌)
+   */
   watch(
     () => props.bg,
     async (val) => {
-      if (!bgElRef || !val) return
+      if (!bgElRef.value || !val) return
 
       /**
-       * 【性能优化 - 休眠机制】
-       * 问题：MusicDetail 组件使用 CSS transform 隐藏而非 v-if 销毁，
-       *       导致 onUnmounted 永不触发，后台切歌时仍加载600x600大图并执行GSAP动画。
-       * 解决：当详情页关闭时，仅清理旧动画，不加载大图、不创建新动画，
-       *       等用户打开详情页时再执行渲染。
+       * 【性能优化 - 休眠机制 (Sleep Implementation)】
+       * 问题：MusicDetail 组件只是被 CSS 移出了屏幕 (transform)，并没有被 Vue 销毁。
+       *       这意味着如果后台一直在通过 watch 加载大图、跑 GSAP 动画，会极度浪费 CPU/内存。
+       *
+       * 策略：
+       * 1. 当详情页关闭 (!isOpenDetail) 时：
+       *    直接 Kill 掉所有动画，不加载大图，不做任何渲染。
+       * 2. 当详情页打开时：
+       *    正常执行渲染。
        */
       if (!flash.isOpenDetail) {
-        // 详情页关闭时：只清理旧动画，不执行新渲染
         if (currentTimeline) {
           currentTimeline.kill()
           currentTimeline = null
@@ -141,32 +169,37 @@ nextTick(() => {
         return
       }
 
-      // 详情页打开时：执行完整的封面动画
+      // 正常模式：执行完整动画
       executeCoverAnimation(val)
     },
     { immediate: true }
   )
 
   /**
-   * 【唤醒机制】监听详情页打开状态
-   * 当用户打开详情页时，补做一次封面渲染，确保图片正确显示
+   * 【唤醒机制 (Wake-up Implementation)】
+   * 监听详情页打开状态。
+   *
+   * 场景：用户在后台切了 10 首歌 (触发了上面的休眠)，现在打开详情页。
+   * 此时界面上可能还是第 1 首歌的封面，或者什么都没有。
+   *
+   * 动作：检测到打开时，强制执行一次渲染 (immediate=true)，把最新的封面补上去。
    */
   watch(
     () => flash.isOpenDetail,
     (isOpen) => {
       if (isOpen && props.bg) {
-        // 唤醒时执行渲染（immediate=true 跳过缩小动画，直接显示）
         executeCoverAnimation(props.bg, true)
       }
     }
   )
 })
+
+/**
+ * 歌手名格式化
+ * 例如：[{name: '周杰伦'}, {name: '阿信'}] => "周杰伦/阿信"
+ */
 const arNames = computed(() => {
-  let result = ''
-  props.ar.forEach((item, index) => {
-    result += props.ar.length - 1 !== index ? item.name + '/' : item.name
-  })
-  return result
+  return props.ar.map((item) => item.name).join('/')
 })
 </script>
 
@@ -174,9 +207,12 @@ const arNames = computed(() => {
   <div :style="{ 'backdrop-filter': isBlur ? 'blur(0px)' : 'none' }" class="shadow">
     <div class="lyric-and-bg-container">
       <div
+        ref="bgElRef"
         class="cover-container"
         :style="{ transform: props.lyric.length ? '' : 'translateX(0)' }"
       >
+        <!-- 封面容器 对应 JS 中的 bgElRef，用于 GSAP 执行缩放/放大动画。-->
+        <!-- transform的逻辑是 没有歌词让封面固定在中间-->
         <div
           class="title"
           @click="
@@ -197,7 +233,7 @@ const arNames = computed(() => {
           >
         </div>
         <video
-          v-show="props.videoPlayUrl"
+          v-if="props.videoPlayUrl"
           ref="videoCover"
           class="video-cover"
           autoplay
@@ -205,7 +241,13 @@ const arNames = computed(() => {
           muted
           :src="props.videoPlayUrl || undefined"
         ></video>
-        <div v-show="!props.videoPlayUrl" class="img-cover" />
+        <!-- 
+          静态图片封面 (.img-cover)
+          优化：
+          1. 使用 v-else 与上面的 video 形成互斥，DOM 结构更清晰。
+          2. 使用 :style 绑定响应式变量 coverImage，替代原本的 imperative DOM 操作。
+        -->
+        <div v-else class="img-cover" :style="{ backgroundImage: coverImage }" />
       </div>
 
       <div v-show="props.lyric.length" class="lyric-container"></div>
@@ -221,7 +263,7 @@ const arNames = computed(() => {
  * 3. 使用 transform: translate3d 开启GPU合成层
  */
 .shadow {
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px); /*/毛玻璃效果，但现在调低后效果不明显了 */
   position: absolute;
   top: 0;
   left: 0;
@@ -272,7 +314,7 @@ const arNames = computed(() => {
       height: 100%;
       width: 100%;
       border-radius: 5px;
-      /* 优化: 仅对背景图过渡 */
+      /* 优化: 仅对背景图属性使用过渡，避免重绘整个盒子 */
       transition: background-image 0.8s ease-out;
       @extend .bgSetting;
     }
@@ -282,6 +324,11 @@ const arNames = computed(() => {
       width: 42vw;
       border-radius: 5px;
       overflow: auto;
+
+      /* 
+       * 歌词遮罩效果 (Fade In/Out)
+       * 上下各保留 10% 的透明渐变，让歌词滚动时有"消失在虚空中"的感觉
+       */
       mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
       -webkit-mask-image: linear-gradient(
         to bottom,
@@ -290,8 +337,13 @@ const arNames = computed(() => {
         black 90%,
         transparent
       );
+
       position: relative;
-      /* 优化滚动性能 */
+
+      /* 
+       * 滚动性能优化: 
+       * 告诉浏览器这个盒子里的滚动位置会经常变，请做好准备
+       */
       will-change: scroll-position;
       contain: layout style;
     }

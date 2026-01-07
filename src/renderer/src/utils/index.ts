@@ -1,47 +1,45 @@
-// 根据毫秒数格式化出分钟及其秒数 msec: 275573 = 04:35
+// ==================== 时间和日期处理 ====================
+/**
+ * 将毫秒数格式化为 "分:秒" 的格式
+ * 例如: 275573ms -> "04:35"
+ * @param msec 传入的时间数值
+ * @param isMsec 是否是毫秒 (默认为 true)，如果是 false 则当做秒处理
+ * 假如传入135000  135000 / 1000 = 135秒 135 % 60 = 15 (135 - 15) / 60 = 2 02:15
+ */
 export function formattingTime(msec: number, isMsec = true) {
   let result = ''
+  // 统一转换为秒单位
   const s = isMsec ? msec / 1000 : msec
+  //计算剩余秒数部分
   const sec = Math.floor(s % 60)
+  //计算分钟数部分
   const minute = Math.floor((s - sec) / 60)
-
+  // 拼接字符串，如果小于 1，在前面补 '0'
   result = `${
     minute.toString().length <= 1 ? '0' + minute : minute
   }:${sec.toString().length <= 1 ? '0' + sec : sec}`
 
   return result
 }
-
-// 随机产生指定范围数
-export function randomNum(minNum: number, maxNum: number, decimals = false) {
-  if (decimals) {
-    return Math.random() * (maxNum - minNum) + minNum
-  }
-  return Math.floor(Math.random() * (maxNum - minNum + 1) + minNum)
-}
-
-/*
-* 首先Array(1,2,3,4)，你知道的吧,生成一个数组[1,2,3,4]
-  然后是apply的问题,要求第二个参数是一个数组
-  那么Array.apply(null,[1,2,3,4])生成的和上述的一样的[1,2,3,4]数组
-  但apply有个奇怪的地方,当第二个参数是一个带有length属性的对象时,会当成一个数组使用
-  所以Array.apply(null,{length:4})生成[undefined,undefined,undefined,undefined]
-  相当于Array.apply(null,[undefined,undefined,undefined,undefined])
-
-  +'1' 可以使string转为number
-* */
-// 格式化时间戳 YY-MM-DD hh:mm:ss = 2016-06-19 10:05:44    'YY-MM-DD hh:mm:ss' | 'YY-MM-DD'
+/**
+ * 格式化时间戳
+ * 将 Date 对象转换为指定格式的字符串，如 "2016-06-19 10:05:44"
+ * @param timestamp 时间戳
+ * @param format 格式模板，默认为 'YY-MM-DD hh:mm:ss'
+ */
 export function formatDate(timestamp: number, format: string = 'YY-MM-DD hh:mm:ss') {
   const date = new Date(timestamp)
   const year = date.getFullYear(),
-    month = date.getMonth() + 1, // 月份是从0开始的
+    month = date.getMonth() + 1, // 注意：JS中月份是 0-11，所以要 +1
     day = date.getDate(),
     hour = date.getHours(),
     min = date.getMinutes(),
     sec = date.getSeconds()
+  // 预生成一个 00-09 的补零数组，用于快速补齐两位数变成 ['00', '01', ... '09']
   const preArr = [...Array(10)].map((_, index) => {
     return '0' + index
   })
+  // 使用正则替换传入的模板，将格式模板中的占位符替换为实际值
   const result = format
     .replace(/YY/g, '' + year)
     .replace(/MM/g, preArr[month] || '' + month)
@@ -56,8 +54,34 @@ export function formatDate(timestamp: number, format: string = 'YY-MM-DD hh:mm:s
 export function varDayim() {
   return new Date().getDate()
 }
+// 判断给定的时间戳是否是“今天”
+export function calculateIsToday(timestamp: number): boolean {
+  // 技巧：将时间的时候、分、秒、毫秒都设为 0，只比较日期部分
+  const todayDate = new Date().setHours(0, 0, 0, 0)
+  const paramsDate = new Date(timestamp).setHours(0, 0, 0, 0)
 
-// 嵌套取值
+  return todayDate === paramsDate
+}
+
+// ==================== 随机数 ====================
+/**
+ * 生成指定范围内的随机数
+ * Math.random()是 Js 原生的随机函数，它会返回一个 [0, 1) 之间的随机小数
+ * @param decimals 是否返回小数 (true则返回小数，false返回整数)
+ */
+export function randomNum(minNum: number, maxNum: number, decimals = false) {
+  if (decimals) {
+    return Math.random() * (maxNum - minNum) + minNum
+  }
+  return Math.floor(Math.random() * (maxNum - minNum + 1) + minNum)
+}
+
+// ==================== 对象属性安全访问 ====================
+/**
+ * 嵌套取值 因为SongList 组件的列是动态，通过columns来配置，可选链是静态的不行
+ * 作用：避免访问深层对象时因为中间属性不存在而报错
+ * 例子：lookup(user, 'profile.address.city')
+ */
 export function lookup(obj: object, key: string | undefined): any {
   if (!key) {
     return ''
@@ -74,32 +98,42 @@ export function lookup(obj: object, key: string | undefined): any {
   }
   return temp ?? ''
 }
+// 类型守卫：判断是否为字符串
+export const isString = (value: any): value is string => {
+  return typeof value === 'string'
+}
 
+// ==================== 图片预加载与平滑过渡 ====================
 /**
- * 切换图片过渡 (防止图片闪烁)
- * 内存优化:
- * 1. 清理事件处理器引用，帮助垃圾回收
- * 2. 加载失败时也要resolve，避免Promise泄漏
+ * 切换图片过渡 (防止图片闪烁，并进行内存优化)
+ * 返回一个 Promise，只有当图片加载成功后才 resolve
+ * 作用是：
+ * 1. 预加载图片
+ * 2. 避免图片闪烁
+ * 3. 优化内存使用
  */
 export function toggleImg(src: string, size?: string): Promise<HTMLImageElement> {
   if (!src) {
     return Promise.reject(`toggleImg：传递的src为空: ${src}`)
   }
   const img = new Image()
+  // 在src后面添加尺寸参数，如 ?param=200y200
   img.src = size ? src + `?param=${size}` : src
+  // 设置跨域，允许 Canvas 读取图片数据 (用于后续提取颜色)
   img.crossOrigin = 'Anonymous'
+  // 预设宽高为屏幕宽高
   img.width = document.body.clientWidth
   img.height = document.body.clientHeight
 
   return new Promise((resolve, reject) => {
     img.onload = () => {
-      // 清理事件处理器，帮助垃圾回收
+      // 加载完成后，断开事件引用，帮助 JS 垃圾回收机制回收内存
       img.onload = null
       img.onerror = null
       resolve(img)
     }
     img.onerror = () => {
-      // 清理事件处理器
+      // 即使失败也要清理引用
       img.onload = null
       img.onerror = null
       console.error(`Failed to load image: ${src}`)
@@ -109,28 +143,27 @@ export function toggleImg(src: string, size?: string): Promise<HTMLImageElement>
   })
 }
 
-// 是否处于今天
-export function calculateIsToday(timestamp: number): boolean {
-  // 把今天的日期时分秒设置为00:00:00, 返回一个时间戳
-  const todayDate = new Date().setHours(0, 0, 0, 0)
-  const paramsDate = new Date(timestamp).setHours(0, 0, 0, 0)
-
-  return todayDate === paramsDate
-}
-
-// 解析路径参数
+// ==================== URL 路径解析 ====================
+/**
+ * 解析路径中的查询参数
+ * 将 "/path?a=1&b=2" 转换为 { path: "/path", query: { a: '1', b: '2' } }
+ */
 export function parsePathQuery(path: string) {
   const result = {
     path: path,
     query: {} as { [key: string]: any }
   }
+  //找到问号位置
   const index = path.indexOf('?')
   if (index === -1) {
     return result
   }
+  //截取问号前的路径
   result.path = path.slice(0, index)
+  //截取问号后的字符串并按 & 拆分
   const queryArr = path.slice(index + 1).split('&')
   queryArr.forEach((item) => {
+    //按 = 拆分键和值
     const index = item.indexOf('=')
     const key = item.slice(0, index)
     const value = item.slice(index + 1)
@@ -139,44 +172,9 @@ export function parsePathQuery(path: string) {
   return result
 }
 
-// 根据时间执行总时长    !!!! 请注意，当done为true时，必须调用pause来中断函数执行
-export function animation(
-  time: number,
-  cb: (elapsed: number, done: boolean) => void
-): (isPause: boolean) => void {
-  let start: number | undefined
-  let elapsed = 0
-  let paused = false
-
-  function step() {
-    if (!paused) {
-      elapsed = Date.now() - (start ?? Date.now())
-      const done = elapsed >= time
-      if (done) {
-        cb(time, true)
-        clearInterval(intervalId)
-      } else {
-        cb(elapsed, false)
-      }
-    }
-  }
-
-  start = Date.now()
-  const intervalId: ReturnType<typeof setInterval> = setInterval(step, 0) // 模拟 requestAnimationFrame 的频率
-
-  return (isPause: boolean) => {
-    if (isPause) {
-      paused = true
-    } else {
-      if (paused) {
-        paused = false
-        start = Date.now() - elapsed // 重置开始时间
-      }
-    }
-  }
-}
-
-// gpt-4
+//==================== 颜色算法相关 ====================
+//RGB 转 HSL
+// HSL (色相, 饱和度, 亮度) 比 RGB 更容易进行色彩分析
 export function rgbToHsl(r: number, g: number, b: number) {
   const rNorm = r / 255
   const gNorm = g / 255
@@ -186,7 +184,7 @@ export function rgbToHsl(r: number, g: number, b: number) {
   let h = 0
   let s = 0
   const l = (max + min) / 2
-
+  //以下是计算色相、饱和度、亮度的标准转换公式
   if (max !== min) {
     const d = max - min
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
@@ -207,29 +205,37 @@ export function rgbToHsl(r: number, g: number, b: number) {
   return [h, s, l]
 }
 
-// gpt-4
+//判断颜色是否“好看”
+// 用于过滤掉太黑、太白、太灰的颜色，这些颜色做背景不好看
 export function isGoodColor(r: number, g: number, b: number) {
   const hsl = rgbToHsl(r, g, b)
-  const s = hsl[1]
-  const l = hsl[2]
+  const s = hsl[1] // 饱和度
+  const l = hsl[2] // 亮度
   // 过滤掉过亮或过暗，过饱和或过淡的颜色
   if (l < 0.2 || l > 0.8 || s < 0.2 || s > 0.8) {
     return false
   }
   return true
 }
-// gpt-4
+//寻找最佳颜色组合
+/**
+ * 从一组颜色中选出 num 个“最好”的颜色
+ * 算法思路：优先选 isGoodColor 的，然后选差异化最大的
+ */
 export function findBestColors(
   colors: Array<[number, number, number]>,
   num: number
 ): Array<[number, number, number]> {
+  // 先过滤出“好颜色”
   let goodColors = colors.filter((color) => isGoodColor(...color))
   if (goodColors.length < num) {
+    // 如果好颜色不够凑数，就拿“坏颜色”来补
     const badColors = colors.filter((color) => !isGoodColor(...color))
     goodColors = [...goodColors, ...badColors.slice(0, num - goodColors.length)]
   }
 
   const bestColors: Array<[number, number, number]> = []
+  //贪心算法选择颜色：每次选一个跟已选颜色差别最大的
   for (let i = 0; i < num; i++) {
     let bestColor: [number, number, number] | undefined
     let maxDifference = 0
@@ -256,6 +262,7 @@ export function findBestColors(
   return bestColors
 }
 
+// ==================== Electron 环境判断 ====================
 export const isElectron = () => {
   // darwin: macOS 操作系统
   // linux: Linux 操作系统
@@ -263,17 +270,12 @@ export const isElectron = () => {
   return ['linux', 'win32'].includes(window.electron?.process.platform || '')
 }
 
-export const isString = (value: any): value is string => {
-  return typeof value === 'string'
-}
+// ==================== 数字转中文单位 (播放量) ====================
 
-/*
-* // 测试
-console.log(formatNumberToMillion(8359838)); // 输出 "835.9万"
-console.log(formatNumberToMillion(123456));   // 输出 "12.3万"
-console.log(formatNumberToMillion(9876543));  // 输出 "987.7万"
-console.log(formatNumberToMillion(5000));     // 输出 "5000"
-* */
+/**
+ * 将大数字转换为 "万" 或 "亿" 结尾的字符串
+ * 音乐App常见功能：显示 "10.5万" 而不是 "105000"
+ */
 export function formatNumberToMillion(number: number) {
   if (number >= 100000000) {
     // 如果数字大于等于 1 亿
@@ -287,40 +289,20 @@ export function formatNumberToMillion(number: number) {
     return number.toString() // 数字小于 1 万，不需要处理
   }
 }
-
+// ==================== URL 校验 ====================
+//设置页面的url
 type UrlValidationResult = {
   isValid: boolean
   message: string
 }
 export function checkUrlValidity(url: string): UrlValidationResult {
   try {
-    const parsed = new URL(url) // 如果格式错误会抛异常
+    const parsed = new URL(url) // // 利用原生 API 检查 如果格式错误会抛异常
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       return { isValid: false, message: '协议必须是 http 或 https' }
     }
     return { isValid: true, message: '' }
   } catch {
     return { isValid: false, message: 'URL 格式不正确' }
-  }
-}
-
-export function convertToProxyUrl(originalUrl) {
-  try {
-    const url = new URL(originalUrl)
-    const hostParts = url.hostname.split('.')
-
-    // 提取 m804 中的数字
-    const serverNum = hostParts[0].replace('m', '') // "804"
-
-    const fullPath = url.pathname // "/20250509015458/jdymusic/obj/.../file.mp3"
-
-    // 保留查询参数（如 ?vuutv=xxx）
-    const search = url.search // "?vuutv=xxx"
-    console.log('fullPath', fullPath)
-
-    return `http://neonic.top/music-proxy/${serverNum}${fullPath}${search}`
-  } catch (e) {
-    console.error('URL转换失败:', e)
-    return originalUrl // 或抛出错误
   }
 }

@@ -4,6 +4,7 @@
 <script setup lang="ts" name="BaseAside">
 import { ref, watch } from 'vue'
 import { useUserInfo } from '@/store'
+import { useFlags } from '@/store/flags'
 import { useRoute, useRouter } from 'vue-router'
 import { ListItem, needUseComparisonPaths, paths } from '@/layout/BaseAside/config'
 import {
@@ -22,6 +23,7 @@ import { ElMessage } from 'element-plus'
 import Item from './item.vue'
 
 const store = useUserInfo()
+const flags = useFlags()
 const current = ref<ListItem>()
 
 const router = useRouter()
@@ -142,7 +144,7 @@ const gotoDetail = () => {
 }
 
 const login = () => {
-  window.$login.show()
+  flags.isOpenLogin = true
 }
 const collapsedHandler = (item) => {
   item.isCollapsed = !item.isCollapsed

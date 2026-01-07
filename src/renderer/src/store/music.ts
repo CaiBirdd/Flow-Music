@@ -22,7 +22,7 @@ interface State {
   runtimeList: CurrentItem | null
   runtimeIds: number[]
   lyric: any
-  currentTime: 0
+  currentTime: number
   noTimestamp: boolean
   // 原代码: bgColor: Array<Array<string>>
   bgColor: string[]
@@ -96,6 +96,7 @@ export const useMusicAction = defineStore('musicActionId', () => {
   // 获取歌词
   const getLyricHandler = async (id: number) => {
     const { lrc, tlyric } = await getLyric(id)
+    console.log('获取的歌词:', lrc, tlyric)
     const result = parseLRC(lrc.lyric)
     // 合并翻译歌词
     state.value.lyric = mergeLyricsWithTranslation(result, tlyric?.lyric)

@@ -1,29 +1,16 @@
 ﻿<script setup lang="ts">
 import SongList from '@/components/SongList/index.vue'
-import { computed } from 'vue'
+import { useFlags } from '@/store/flags'
 import { columns } from '@/components/PlayListDrawer/config'
 import { playListState } from '@/layout/BaseAside/usePlayList'
 import { useMusicAction } from '@/store/music'
 
-interface Props {
-  modelValue: boolean
-}
-const props = defineProps<Props>()
-const emit = defineEmits(['update:modelValue'])
+const flags = useFlags()
 const music = useMusicAction()
-
-const setModelValue = computed({
-  get() {
-    return props.modelValue
-  },
-  set(val) {
-    emit('update:modelValue', val)
-  }
-})
 </script>
 
 <template>
-  <div :class="['drawer', { 'open-drawer': setModelValue }]" @click.stop>
+  <div :class="['drawer', { 'open-drawer': flags.isOpenDrawer }]" @click.stop>
     <div class="head">
       <div class="left">
         <span class="text">播放列表</span>

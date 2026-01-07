@@ -1,4 +1,4 @@
-import { convertToProxyUrl, formattingTime } from '@/utils'
+import { formattingTime } from '@/utils'
 import { GetMusicDetailData, getMusicUrl } from '@/api/musicList'
 import { Columns } from '@/components/SongList/index.vue'
 import { Bottom } from '@element-plus/icons-vue'
@@ -70,7 +70,7 @@ export const columns: ComputedRef<Columns[]> = computed(() => {
                 downloadVisible.value = id
                 return
               }
-              const url = convertToProxyUrl(data[0].url)
+              const url = data[0].url
 
               fetch(url)
                 .then((response) => response.blob())

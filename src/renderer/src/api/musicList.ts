@@ -206,7 +206,7 @@ export const likeMusicApi = (id: number, like: boolean = true) =>
 
 // 获取歌词
 export const getLyric = (id: number | string) =>
-  request.get<GetLyricRes>('/lyric/new', { params: { id } })
+  request.get<GetLyricRes>('/lyric', { params: { id } })
 
 // 获取云盘歌曲
 export const getUserCloud = (limit?: number, offset?: number) =>

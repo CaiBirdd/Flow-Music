@@ -3,7 +3,7 @@
 <script setup lang="ts">
 import { defineComponent, h, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { animation, lookup } from '@/utils'
+import { lookup } from '@/utils'
 import { GetMusicDetailData, PlayList } from '@/api/musicList'
 import { useUserInfo } from '@/store'
 import useMusic from '@/components/MusicPlayer/useMusic'

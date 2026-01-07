@@ -9,6 +9,7 @@ import {
 } from '@/layout/BaseAside/config'
 import { useAnonimousLogin } from '@/utils/useLogin'
 import { useMusicAction } from './music'
+import { useFlags } from './flags'
 export const useUserInfo = defineStore('userInfoId', {
   state: () => {
     return {
@@ -33,7 +34,8 @@ export const useUserInfo = defineStore('userInfoId', {
   actions: {
     updateProfile(val: Profile) {
       if (!val || !val.userId) {
-        window.$login.show()
+        const flags = useFlags()
+        flags.isOpenLogin = true
         this.$reset()
         useAnonimousLogin()
         return

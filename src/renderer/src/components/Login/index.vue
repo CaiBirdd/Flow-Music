@@ -1,11 +1,13 @@
 <script lang="ts" setup>
-import { ref, onUnmounted } from 'vue'
+import { ref, onUnmounted, watch } from 'vue'
 import { loginQrCheck, loginQrCreate, loginQrKey } from '@/api/login'
 import { ElMessage } from 'element-plus'
 import { getUserAccountFn } from '@/utils/userInfo'
 import { sendCodePhone, codeLogin } from '@/utils/useLogin'
+import { useFlags } from '@/store/flags'
 
-const dialogVisible = ref(false)
+const flags = useFlags()
+
 const key = ref('')
 const qrUrl = ref('')
 const flag = ref(false) // 是否授权中
@@ -44,20 +46,11 @@ const init = async () => {
       isSucceed.value = true
       localStorage.setItem(`MUSIC_U`, cookie)
       ElMessage.success('授权登陆成功')
-      dialogVisible.value = false
+      flags.isOpenLogin = false
       getUserAccountFn()
     }
   }, 3000)
   return timer
-}
-
-onUnmounted(() => {
-  clearInterval(timer)
-})
-
-const show = () => {
-  init()
-  dialogVisible.value = true
 }
 
 const close = () => {
@@ -99,8 +92,7 @@ const handleOtpFinish = async (value: string) => {
   try {
     otpLoading.value = true
     await codeLogin(phoneNumber.value, value)
-    dialogVisible.value = false
-    // 原代码: close(dialogVisible) - 修改为 close()，因为 close 函数无需参数
+    flags.isOpenLogin = false
     close()
   } catch {
     // 登录失败，用户可以重试（原代码为空catch块）
@@ -109,15 +101,25 @@ const handleOtpFinish = async (value: string) => {
   }
 }
 
-defineExpose({
-  dialogVisible,
-  show
+watch(
+  () => flags.isOpenLogin,
+  (val) => {
+    if (val) {
+      init()
+    } else {
+      close()
+    }
+  }
+)
+
+onUnmounted(() => {
+  clearInterval(timer)
 })
 </script>
 
 <template>
   <v-dialog
-    v-model="dialogVisible"
+    v-model="flags.isOpenLogin"
     scrim="rgba(0,0,0,1)"
     width="auto"
     :persistent="true"
@@ -132,7 +134,7 @@ defineExpose({
         variant="text"
         size="small"
         class="close-btn"
-        @click="dialogVisible = false"
+        @click="flags.isOpenLogin = false"
       />
 
       <div class="login-container">
@@ -170,7 +172,7 @@ defineExpose({
         variant="text"
         size="small"
         class="close-btn"
-        @click="dialogVisible = false"
+        @click="flags.isOpenLogin = false"
       />
 
       <template v-if="!isSendCode">

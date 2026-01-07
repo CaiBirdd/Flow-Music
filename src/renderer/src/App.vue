@@ -17,7 +17,7 @@ import { useSettings } from '@/store/settings'
 import { useContextMenu } from './components/ContextMenu/useContextMenu'
 
 const audioInstance = ref<MusicPlayerInstanceType>()
-const login = ref()
+
 const music = useMusicAction()
 const flags = useFlags()
 const store = useUserInfo()
@@ -34,7 +34,6 @@ onMounted(() => {
     window.$audio = audioInstance.value!
     console.log('初始化全局$audio：', window.$audio)
   }
-  window.$login = login.value!
   document.addEventListener('click', () => {
     flags.isOpenDrawer = false
   })
@@ -52,8 +51,8 @@ getUserAccountFn()
 <template>
   <div id="opacity-bg" style="position: fixed; width: 100%; height: 100%; transition: 0.5s"></div>
   <div id="opacity-bg1" style="position: fixed; width: 100%; height: 100%; transition: 0.5s"></div>
-  <MusicDetail v-model="flags.isOpenDetail" />
-  <PlayListDrawer v-model="flags.isOpenDrawer" />
+  <MusicDetail />
+  <PlayListDrawer />
   <div style="height: 100%; position: relative; z-index: auto">
     <div id="box">
       <Aside></Aside>
@@ -81,7 +80,7 @@ getUserAccountFn()
       </teleport>
     </template>
   </Bottom>
-  <Login ref="login"></Login>
+  <Login></Login>
 </template>
 
 <style lang="scss">

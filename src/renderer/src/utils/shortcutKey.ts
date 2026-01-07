@@ -17,7 +17,9 @@ const keydownHandler = (event: KeyboardEvent) => {
     case 'ArrowRight':
     case 'ArrowLeft':
       if (window.$audio) {
-        event.code === 'ArrowRight' ? (window.$audio.time += 10) : (window.$audio.time -= 10)
+        event.code === 'ArrowRight'
+          ? (window.$audio.el.currentTime += 10)
+          : (window.$audio.el.currentTime -= 10)
       }
       break
     case 'ArrowUp':

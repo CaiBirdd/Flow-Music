@@ -1,6 +1,7 @@
 /**
  * 歌词解析器
- * 支持 LRC 标准格式
+ * 能够处理标准 LRC 以及一行多时间标签的情况
+ * 例如: [01:23.00][02:45.00]这句歌词唱了两遍
  */
 
 export interface LyricLine {
@@ -29,78 +30,94 @@ function parseTime(timeStr: string): number {
 }
 
 /**
- * 解析标准 LRC 格式歌词
- * @example [00:24.46]春雨后太阳缓缓的露出笑容
- * @example [03:05.32][01:28.24]这个夏天 融化了整个季节（多时间标签）
+ * 解析 LRC 格式歌词
+ * 切分 -> 过滤 -> 循环提取所有时间 -> 整理 -> 排序
  */
 export function parseLRC(lrcStr: string): ParseResult {
   const result: LyricLine[] = []
+
+  // 1. 边界卫士
   if (!lrcStr || !lrcStr.trim()) {
     return { lines: result, noTimestamp: true }
   }
 
+  // 2. 切分字符串 以换行符切 得到lines字符串数组
   const lines = lrcStr.split(/\r?\n/).filter((line) => line.trim())
-  let needSort = false
-  let index = 0
 
-  for (const line of lines) {
-    // 跳过 JSON 格式的元数据行（作词、作曲等）
-    if (line.startsWith('{')) continue
+  // 3. 定义正则 (注意这里加了 'g' 全局匹配)
+  // 必须加 'g'，否则 exec 只会匹配第一个，无法处理 [00:01][00:02] 这种情况
+  const timeRegex = /\[(\d{1,2}:\d{1,2}(?:[.:]\d{1,3})?)\]/g
 
-    // 跳过元数据标签 [ti:xxx] [ar:xxx] [al:xxx] 等
-    if (/^\[[a-zA-Z]+:/.test(line)) continue
+  // 4. 逐行处理
+  lines.forEach((line, index) => {
+    // A. 跳过杂质：JSON 元数据 或 头部标签 [ar:xxx]
+    if (line.startsWith('{') || /^\[[a-zA-Z]+:/.test(line)) return
 
-    // 匹配时间标签 [mm:ss.xx] 或 [mm:ss:xx]
-    const timeRegex = /\[(\d{1,2}:\d{1,2}(?:[.:]\d{1,3})?)\]/g
-    const timeTags: number[] = []
-    let match: RegExpExecArray | null
-    let lastIndex = 0
+    // B. 准备提取变量
+    const timeTags: number[] = [] // 这一行里所有的“肉”
+    let match: RegExpExecArray | null //正则匹配的返回值
+    let lastIndex = 0 // 记录最后一次匹配结束的位置
 
+    // C. 循环匹配
+    // 只要还能在这一行里找到时间标签，就一直找下去
+    // [00:01][00:02]歌词 -> 循环两次
+    // match内容还是和之前一样，是一个数组 0对应整个[],1对应时间
     while ((match = timeRegex.exec(line)) !== null) {
+      // 提取时间 (match[1] 是去皮后的时间串)
       timeTags.push(parseTime(match[1]))
+      // 更新标尺位置：现在匹配到了第几个字符？
+      // 方便最后把剩下的歌词截取出来
       lastIndex = timeRegex.lastIndex
     }
 
-    // 没有时间标签的行
+    // D. 情况 1: 没找到时间标签 (纯文本)
     if (timeTags.length === 0) {
       const text = line.trim()
       if (text) {
-        result.push({ time: 0, duration: 0, text, index: index++ })
+        result.push({ time: 0, duration: 0, text, index })
       }
-      continue
+      return
     }
 
-    // 提取歌词文本
+    // E. 情况 2: 找到了 (1个或多个) 时间标签
+    // 截取歌词文本：从最后一个标签后面开始切
     const text = line.slice(lastIndex).trim()
 
-    // 多时间标签情况，需要后续排序
-    if (timeTags.length > 1) needSort = true
-
-    // 为每个时间标签创建歌词行
+    // 哪怕一行有5个时间，我们这里循环5次，
+    // 把它们变成5个独立的歌词对象，虽然文字一样，但时间不同。
     for (const time of timeTags) {
-      result.push({ time, duration: 0, text, index: 0 })
+      result.push({
+        time,
+        duration: 0,
+        text,
+        index // 这里的 index 暂时都是一样的，后面会重置
+      })
     }
-  }
+  })
 
-  // 检查是否都没有有效时间
+  // 5. 检查有效性
+  // 是不是全都是 0 秒的歌词？
+  // 比如有些文件全是文本没有时间轴，这种就不支持滚动
   const hasValidTime = result.some((line) => line.time > 0)
   if (!hasValidTime && result.length > 0) {
+    // 虽然不支持滚动，但还是整理一下索引返回去显示
     result.forEach((line, i) => (line.index = i))
     return { lines: result, noTimestamp: true }
   }
 
-  // 按时间排序
-  if (needSort) {
-    result.sort((a, b) => a.time - b.time)
-  }
+  // 6. 排序 (必须！)
+  // 因为处理多标签后，result 数组里的时间顺序可能被打乱
+  // 比如先 push 了 [02:00] 的，后 push 了 [01:00] 的
+  result.sort((a, b) => a.time - b.time)
 
-  // 重新分配索引并计算 duration
+  // 7. 计算时长 duration 并重置 index
   for (let i = 0; i < result.length; i++) {
-    result[i].index = i
+    result[i].index = i // 保证 index 0,1,2,3... 连续
     if (i < result.length - 1) {
+      // 这一句时长 = 下一句开始 - 这一句开始
       result[i].duration = result[i + 1].time - result[i].time
     } else {
-      result[i].duration = 5 // 最后一行默认 5 秒
+      result[i].duration = 5 // 最后一句默认 5秒
     }
   }
 
@@ -108,44 +125,42 @@ export function parseLRC(lrcStr: string): ParseResult {
 }
 
 /**
- * 合并原歌词和翻译歌词
- * 根据时间戳匹配，将翻译文本附加到原歌词行
- * @param original 原歌词解析结果
- * @param translationLrc 翻译歌词字符串
- * @returns 合并后的歌词行数组
+ * 合并翻译 (逻辑保持不变)
  */
 export function mergeLyricsWithTranslation(
   original: ParseResult,
   translationLrc: string | undefined | null
 ): LyricLine[] {
+  // 如果无翻译字符串，或者或者原歌词本身就是纯文本（没有时间轴),那就没法合并,直接把原歌词原封不动退回去
   if (!translationLrc || !translationLrc.trim() || original.noTimestamp) {
     return original.lines
   }
-
-  // 解析翻译歌词
+  // 翻译歌词也是 LRC 格式，直接复用刚才写的 parseLRC 函数把它变成数组
   const translationResult = parseLRC(translationLrc)
+  //如果翻译歌词解析出来没东西，或者也是纯文本没时间轴，那也退回原歌词
   if (translationResult.noTimestamp || translationResult.lines.length === 0) {
     return original.lines
   }
 
-  // 创建翻译歌词的时间索引 Map（使用时间戳作为 key）
+  // 把翻译歌词转换成一个 Map,这样可以避免双重for循环
+  // Key: 时间 (number) -> Value: 翻译文本 (string)
+  // 这样以后查翻译，只需要 O(1) 的时间复杂度
   const translationMap = new Map<number, string>()
   for (const line of translationResult.lines) {
     if (line.text.trim()) {
       translationMap.set(line.time, line.text)
     }
   }
-
-  // 合并歌词：为原歌词匹配翻译
-  const tolerance = 0.5 // 时间容差（秒）
+  //定义“容差值”：0.5秒，只要翻译的时间和原歌词的时间相差在 0.5秒 以内，我们就认作是同一句。
+  const tolerance = 0.5
   for (const line of original.lines) {
-    // 先尝试精确匹配
+    //精确匹配
     if (translationMap.has(line.time)) {
       line.translation = translationMap.get(line.time)
       continue
     }
-
-    // 容差匹配：查找时间戳相近的翻译
+    //容差匹配/模糊匹配
+    //不得不遍历一下 Map 里的所有翻译，找个时间最近的
     for (const [time, text] of translationMap) {
       if (Math.abs(time - line.time) <= tolerance) {
         line.translation = text

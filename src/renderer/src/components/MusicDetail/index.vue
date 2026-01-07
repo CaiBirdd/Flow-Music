@@ -4,30 +4,22 @@ import { useMusicAction } from '@/store/music'
 import LyricDisplay from './LyricDisplay.vue'
 import FlowBg from './FlowBg.vue'
 
-interface Props {
-  modelValue: boolean
-}
-const props = defineProps<Props>()
-const emit = defineEmits(['update:modelValue'])
+import { useFlags } from '@/store/flags'
+
+const flags = useFlags()
 const music = useMusicAction()
 const correctHeight = ref<number>(0)
 
+// 从 store 中获取当前歌曲的封面图，传给 FlowBg 和 LyricDisplay
+// 这样两个子组件就能拿到同一张图：一个做模糊背景，一个做歌曲封面展示
 const bg = computed(() => {
   return music.state.songs?.al?.picUrl || ''
 })
-const setModelValue = computed({
-  get() {
-    return props.modelValue
-  },
-  set(val) {
-    emit('update:modelValue', val)
-  }
-})
-
+//关闭详情页
 const closeDetail = () => {
-  setModelValue.value = false
+  flags.isOpenDetail = false
 }
-
+//当窗口大小改变时，重新计算body高度
 onMounted(() => {
   window.onresize = () => {
     correctHeight.value = document.body.clientHeight
@@ -40,7 +32,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="containerEl" :class="['container', { open: setModelValue }]">
+  <div ref="containerEl" :class="['container', { open: flags.isOpenDetail }]">
     <el-icon :size="45" class="close np-drag" @click="closeDetail"><ArrowDown /></el-icon>
     <div class="box" :style="{ height: correctHeight + 'px' }">
       <div class="scroll-box" :style="{ height: correctHeight * 2 + 'px' }">
@@ -57,6 +49,7 @@ onUnmounted(() => {
             class="music-detail-bottom"
             style="height: 80px; position: absolute; bottom: 0; width: 100%"
           ></div>
+          <!-- 底部占位符 给底部的播放控制栏留出 80px 的安全距离，防止歌词滚到底部被遮挡。 -->
         </div>
       </div>
     </div>
@@ -72,9 +65,9 @@ onUnmounted(() => {
   bottom: 0;
   left: 0;
   transition: 0.4s;
-  z-index: 2000;
+  z-index: 2000; /* 保证层级最高 */
   overflow: hidden;
-  transform: translateY(100%);
+  transform: translateY(100%); /*默认藏在屏幕最底下 */
 
   .box {
     overflow: hidden;

@@ -10,18 +10,20 @@ import { useMusicAction } from '@/store/music'
 import { useFlags } from '@/store/flags'
 
 interface Props {
-  songs: GetMusicDetailData
+  songs: GetMusicDetailData // 传入歌曲详情数据，主要为了获取 songs.dt (总时长)
 }
 const props = defineProps<Props>()
-const music = useMusicAction()
-const flags = useFlags()
+const music = useMusicAction() // 以获取 currentTime (当前播放时间) 和 bgColor (封面颜色)
+const flags = useFlags() //获取是否打开详情页
 
 /**
  * 进度条双向绑定值（0-100）
+ * v-slider 组件需要的是 0-100 的数值，而音频播放使用的是“秒”
  * 使用 songs.dt（歌曲元数据时长，毫秒）替代 audio.duration
  * 原因：window.$audio.el.duration 在某些时机获取不到正确值
  */
 const model = computed<number>({
+  // Getter: 负责“读”，将当前秒数转换为百分比供 UI 显示
   get() {
     const duration = props.songs.dt // 毫秒
     if (!duration) return 0
@@ -29,10 +31,12 @@ const model = computed<number>({
     return ((music.state.currentTime * 1000) / duration) * 100
   },
   set(val) {
+    // Setter: 负责“写”，当用户拖动滑块时，将百分比还原为秒数并设置播放进度
     const duration = props.songs.dt // 毫秒
     if (!duration) return
     // 百分比转秒，设置播放位置
-    window.$audio.time = (val * duration) / 100 / 1000
+    // window.$audio.el.currentTime 是原生 Audio 属性
+    window.$audio.el.currentTime = (val * duration) / 100 / 1000
   }
 })
 
@@ -61,32 +65,20 @@ const gradientColor2 = computed(() =>
 </template>
 
 <style scoped lang="scss">
-:deep(.el-slider__button-wrapper) {
-  cursor: pointer !important;
-  display: none;
-}
+// 隐藏 Vuetify 默认的圆形滑块头 (thumb)，实现“纯线条”的极简风格
 :deep(.v-slider-thumb) {
   display: none;
 }
-:deep(.el-slider__runway) {
-  height: 1px;
-  width: 100%;
-  padding: 15px 0;
-  background-color: transparent;
-}
 
-:deep(.el-slider) {
-  width: 100%;
-}
-</style>
-<style lang="scss">
 /* 未展开详情页样式：红色细线 */
 .base-progress-bar.view-progress {
   height: 31px;
-  .v-input {
+  // 去除输入框默认边距
+  :deep(.v-input) {
     margin-inline: 0;
   }
-  .v-slider-track__fill {
+  // 核心样式：修改滑块轨道
+  :deep(.v-slider-track__fill) {
     height: 1px;
     background-color: rgb(236, 65, 65);
     border-radius: 0;
@@ -95,10 +87,10 @@ const gradientColor2 = computed(() =>
 
 /* 通用样式：隐藏不需要的元素 */
 .base-progress-bar {
-  .v-input__details {
+  :deep(.v-input__details) {
     display: none;
   }
-  .v-slider-track__background {
+  :deep(.v-slider-track__background) {
     display: none;
   }
 }
@@ -106,14 +98,14 @@ const gradientColor2 = computed(() =>
 /* 展开详情页样式：渐变色效果 */
 .base-progress-bar.detail-progress {
   height: 30px;
-  .v-slider-track__fill {
+  :deep(.v-slider-track__fill) {
     height: 6px;
     background-image: linear-gradient(to right, var(--gradient-color-1), var(--gradient-color-2));
     opacity: 0.8;
     border-radius: 6px;
     background-color: transparent;
   }
-  .v-input {
+  :deep(.v-input) {
     margin-inline: 0;
   }
 }

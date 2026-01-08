@@ -8,7 +8,7 @@ interface Props {
   orderStatusVal: number //播放模式是哪个
   orderStatus: string[] //播放模式的图标
 }
-const props = defineProps<Props>()
+defineProps<Props>()
 // 定义该组件会向外触发的所有事件
 const emit = defineEmits([
   'setOrderHandler', // 请求切换播放模式
@@ -51,9 +51,6 @@ const emit = defineEmits([
     justify-content: center;
     align-items: center;
 
-    .icon-xihuan5 {
-      font-size: 22px !important;
-    }
     .icon {
       font-size: 18px;
     }

@@ -1,7 +1,7 @@
 ﻿<!-- 功能：渲染歌曲列表页（可搜索、播放、分页、右键菜单、显示专辑/歌手信息等）
  是歌曲列表展示与播放交互的主视图组件。 -->
 <script setup lang="ts">
-import { defineComponent, h, nextTick, ref, watch } from 'vue'
+import { h, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { lookup } from '@/utils'
 import { GetMusicDetailData, PlayList } from '@/api/musicList'
@@ -77,12 +77,12 @@ const formatCount = (index: number) => {
   return index.toString().length > 1 ? index : '0' + index
 }
 
-const handlePlaylistMenuSelect = (item: { label: string; value: string }, row, index) => {
+const handlePlaylistMenuSelect = (item: { label: string; value: string }, row) => {
   switch (item.value) {
     case 'collection':
       break
     case 'delete':
-      deleteSongHandler(row.id, props.listInfo.id, index)
+      deleteSongHandler(row.id, props.listInfo.id)
       break
     case 'comment':
       router.push({
@@ -298,7 +298,7 @@ watch(
           v-for="(data, i) in filterList"
           :key="data.id"
           :items="playlistMenuItems"
-          @select="(e) => handlePlaylistMenuSelect(e, data, i)"
+          @select="(e) => handlePlaylistMenuSelect(e, data)"
         >
           <div
             :ref="(el) => setItemRef(el, data.id)"

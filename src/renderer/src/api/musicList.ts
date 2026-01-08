@@ -157,17 +157,6 @@ export interface GetArtistAlbumRes {
   more: boolean
 }
 
-interface GetIntelliganceListRes {
-  code: number
-  message: string
-  data: {
-    id: number // 根对象ID
-    alg: string // 算法
-    recommended: boolean // 这个字段表示如果为false则表示当前歌曲是“已喜欢”列表里的，false则反之
-    songInfo: GetMusicDetailData | null // 歌曲信息
-  }[]
-}
-
 // 获取喜欢音乐列表ids
 export const getLikeMusicListIds = (uid: number) =>
   request.get<{ checkPoint: number; code: number; ids: number[] }>('/likelist', {
@@ -231,12 +220,6 @@ export const getCommentMusic = (
 ) => request.get('/comment/new', { params: { id, type, pageNo, pageSize, sortType, cursor } })
 
 export const getRecordSong = (limit = 200) => request.post('/record/recent/song', { limit })
-
-// 心动模式/智能播放
-export const getIntelliganceList = (pid: number, id: number, sid: number) =>
-  request.get<GetIntelliganceListRes>('/playmode/intelligence/list', {
-    params: { pid, id, sid }
-  })
 
 // 歌曲动态封面
 export const getDynamicCover = (id: number) =>

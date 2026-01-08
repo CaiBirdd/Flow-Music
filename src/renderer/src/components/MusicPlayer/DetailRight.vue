@@ -7,7 +7,7 @@ import { useFlags } from '@/store/flags'
 interface Props {
   songs: GetMusicDetailData // 为了获取总时长 (dt)
   currentTime: number // 当前播放到了第几秒 (来自父组件的实时更新)
-  audio: HTMLAudioElement // 把 audio 元素传给子组件 Volume 用
+  audio: any // 把 audio 元素传给子组件 Volume 用
 }
 
 const props = defineProps<Props>()

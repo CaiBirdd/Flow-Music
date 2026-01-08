@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, provide } from 'vue'
-import { useRoute } from 'vue-router'
+import { onMounted, ref, provide, useTemplateRef } from 'vue'
 import { useMusicAction } from '@/store/music'
 import { getUserAccountFn } from '@/utils/userInfo'
 import { useFlags } from '@/store/flags'
@@ -16,7 +15,7 @@ import '@/utils/shortcutKey'
 import { useSettings } from '@/store/settings'
 import { useContextMenu } from './components/ContextMenu/useContextMenu'
 
-const audioInstance = ref<MusicPlayerInstanceType>()
+const audioInstance = useTemplateRef<MusicPlayerInstanceType>('audioInstance')
 
 const music = useMusicAction()
 const flags = useFlags()
@@ -74,8 +73,6 @@ getUserAccountFn()
           ref="audioInstance"
           :songs="music.state?.songs"
           :src="music.state.musicUrl"
-          @cut-song="music.cutSongHandler"
-          @play-end="music.playEnd"
         ></MusicPlayer>
       </teleport>
     </template>

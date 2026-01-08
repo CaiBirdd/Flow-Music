@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import {
   CurrentItem,
   getDynamicCover,
-  getIntelliganceList,
   getLyric,
   getMusicDetail,
   GetMusicDetailData,
@@ -27,8 +26,8 @@ interface State {
   // 原代码: bgColor: Array<Array<string>>
   bgColor: string[]
   videoPlayUrl: string | null
-  // 0心动 1列表循环 2随机播放 3单曲循环
-  orderStatusVal: 0 | 1 | 2 | 3
+  // 0列表循环 1随机播放 2单曲循环
+  orderStatusVal: 0 | 1 | 2
   load: boolean
   index: number
   lastIndexList: number[]
@@ -79,13 +78,8 @@ export const useMusicAction = defineStore('musicActionId', () => {
     state.value.currentItem = val as any
   }
   const updateRuntimeList = (list: CurrentItem, ids: number[]) => {
-    if (list.specialType !== 5 && state.value.orderStatusVal === 0) {
-      state.value.orderStatusVal = 1
-    }
     state.value.runtimeList = list
     state.value.runtimeIds = ids
-
-    getIntelliganceListHandler()
   }
   const updateTracks = (tracks: GetMusicDetailData[], ids: number[]) => {
     if (state.value.runtimeList) {
@@ -164,20 +158,21 @@ export const useMusicAction = defineStore('musicActionId', () => {
   //
   //   }))
   // }
-  // 0心动 1列表循环 2随机播放 3单曲循环
-  const orderTarget = (i: 0 | 1 | 2 | 3) => {
+  // 0列表循环 1随机播放 2单曲循环
+  const orderTarget = (i: 0 | 1 | 2) => {
     if (i === 0) {
+      // 列表循环: 下一首
       return (state.value.index + 1) % state.value.runtimeIds.length
     } else if (i === 1) {
-      return (state.value.index + 1) % state.value.runtimeIds.length
-    } else if (i === 2) {
+      // 随机播放
       return randomNum(0, state.value.runtimeIds.length - 1)
     } else {
+      // 单曲循环: 保持当前
       return state.value.index
     }
   }
   const playEnd = () => {
-    state.value.index = orderTarget((state.value?.orderStatusVal ?? 0) as 0 | 1 | 2 | 3)
+    state.value.index = orderTarget((state.value?.orderStatusVal ?? 0) as 0 | 1 | 2)
     if (state.value.index > state.value.runtimeIds.length - 1) {
       return
     }
@@ -185,7 +180,8 @@ export const useMusicAction = defineStore('musicActionId', () => {
   }
   // 切换歌曲
   const cutSongHandler = (target: boolean) => {
-    if ([0, 1, 3].includes(state.value?.orderStatusVal ?? 0)) {
+    // 列表循环(0) 或 单曲循环(2) 在手动切歌时逻辑一致: 上一首/下一首
+    if (state.value.orderStatusVal === 0 || state.value.orderStatusVal === 2) {
       state.value.index = target ? state.value.index + 1 : state.value.index - 1
       if (state.value.index > state.value.runtimeIds.length - 1) {
         state.value.index = 0
@@ -195,10 +191,11 @@ export const useMusicAction = defineStore('musicActionId', () => {
       getMusicUrlHandler(state.value.runtimeList!.tracks[state.value.index])
       return
     }
+    // 随机播放(1)
     if (!target) {
       const i =
-        state.value.lastIndexList[state.value.lastIndexList.length - 1] ||
-        orderTarget(state.value?.orderStatusVal)
+        state.value.lastIndexList[state.value.lastIndexList.length - 1] ??
+        orderTarget(state.value?.orderStatusVal as 0 | 1 | 2)
       getMusicUrlHandler(state.value.runtimeList!.tracks[i])
       state.value.lastIndexList.splice(state.value.lastIndexList.length - 1)
       return
@@ -212,32 +209,6 @@ export const useMusicAction = defineStore('musicActionId', () => {
     // 将 [89, 134, 167] 转换为 "89, 134, 167" 供 CSS v-bind 使用
     state.value.bgColor = colors.map((color) => color.join(', '))
   }
-  // 获取心动歌曲列表  只支持我喜欢的列表 pid: 歌单id   id: 歌曲id
-  const getIntelliganceListHandler = async () => {
-    const runtimeList = state.value.runtimeList
-
-    if (state.value.orderStatusVal !== 0 || !runtimeList || runtimeList.specialType !== 5) {
-      return
-    }
-
-    const songs = state.value.songs
-    // id可能是string | number，添加as number断言
-    const { data } = await getIntelliganceList(
-      runtimeList.id as number,
-      songs.id as number,
-      songs.id as number
-    )
-
-    const tracks = data
-      .filter((item) => !!item.songInfo)
-      .map((item) => {
-        return item.songInfo!
-      })
-    const ids = tracks.map((item) => {
-      return item!.id
-    })
-    updateTracks(tracks, ids)
-  }
 
   return {
     state,
@@ -250,7 +221,6 @@ export const useMusicAction = defineStore('musicActionId', () => {
     playEnd,
     cutSongHandler,
     updateBgColor,
-    getIntelliganceListHandler,
     updateTracks,
     updateSearchList
   }

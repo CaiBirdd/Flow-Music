@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, UnwrapRef } from 'vue'
+import { ref, onMounted, onUnmounted, UnwrapRef, useTemplateRef } from 'vue'
 import { useUserInfo } from '@/store'
 import { useMusicAction } from '@/store/music'
 import ProgressBar from '@/components/MusicPlayer/ProgressBar.vue'
@@ -8,7 +8,6 @@ import DetailLeft from '@/components/MusicPlayer/DetailLeft.vue'
 import DetailCenter from '@/components/MusicPlayer/DetailCenter.vue'
 import DetailRight from '@/components/MusicPlayer/DetailRight.vue'
 import { ListenerName, useListener } from '@/components/MusicPlayer/listener'
-import usePlayList, { playListState } from '@/layout/BaseAside/usePlayList'
 import { LyricPlayer } from '@/utils/lyric'
 import '@/utils/lyric/style.scss'
 
@@ -17,13 +16,16 @@ import '@/utils/lyric/style.scss'
 // -----------------------------------------------------------------------------
 
 // 播放模式图标映射: 心动 | 列表循环 | 随机 | 单曲循环
-const orderStatus = ['icon-xihuan5', 'icon-xunhuan', 'icon-suijibofang', 'icon-danquxunhuan']
+// 播放模式图标映射: 列表循环 | 随机 | 单曲循环
+const orderStatus = ['icon-xunhuan', 'icon-suijibofang', 'icon-danquxunhuan']
 
 /**
  * userAudio 类型：
  * 这是一个“混合体”，它既包含了原生 HTMLAudioElement 的所有属性
  * 又覆盖（Omit）并重写了 play 和 pause 方法。
  * 目的：为了实现自定义的“音量淡入淡出”效果，而不是默认的生硬启停。
+ * lengthen控制淡入淡出 isNeed控制图标变不变
+ * 因为淡入淡出是异步所以返回promise
  */
 type userAudio = {
   play: (lengthen?: boolean) => Promise<undefined>
@@ -54,30 +56,19 @@ interface Props {
 // -----------------------------------------------------------------------------
 
 const props = defineProps<Props>()
-const emit = defineEmits(['playEnd', 'cutSong']) // 播放结束、切歌
+// const emit = defineEmits(['playEnd']) // 播放结束
 
 // 状态仓库
 const store = useUserInfo() // 用户信息
 const music = useMusicAction() // 音乐数据
 
 // 核心状态 Refs
-const audio = ref<userAudio>() // 绑定到模板 <audio ref="audio">
+// 使用 Vue 3.5+ 的 useTemplateRef 明确这是一个 DOM 引用，而非普通数据
+const audio = useTemplateRef<userAudio>('audio')
 const isPlay = ref(false)
 
 // 组合式函数
 const { addListener, executeListener } = useListener(audio) // 初始化事件监听器系统
-const { getPlayListDetailFn } = usePlayList() // 初始化歌单获取能力
-
-// -----------------------------------------------------------------------------
-// 核心音频辅助区 Region: Audio Core Helpers
-// -----------------------------------------------------------------------------
-
-// 内存优化: 错误处理函数，提取出来是为了方便 removeEventListener
-const audioErrorHandler = (event: any) => {
-  if (event.target.error.code === 4) {
-    // 音频源无效 error code 4 = MEDIA_ERR_SRC_NOT_SUPPORTED
-  }
-}
 
 // 保存原生 Audio 方法的变量，用于在劫持后也能调用原生能力
 let originPlay: HTMLMediaElement['play']
@@ -97,14 +88,15 @@ const transitionIsPlay = ref(false) // 这是一个细节点：即使调用了 p
  * @param lengthen 是否延长时间（步长更小，过渡更平滑）
  */
 function transitionVolume(
-  volume: number,
-  target: boolean = true,
-  lengthen: boolean = false
+  volume: number, //目标音量
+  target: boolean = true, //淡入true还是淡出false
+  lengthen: boolean = false //速度 默认false
 ): Promise<undefined> {
   clearInterval(timer) // 清除上一次未完成的渐变
   const playVolume = lengthen ? 40 : 15 // 渐入步长
   const pauseVolume = lengthen ? 20 : 10 // 渐出步长
 
+  //构造函数是立即执行的
   return new Promise((resolve) => {
     if (!audio.value) {
       resolve(undefined)
@@ -113,6 +105,7 @@ function transitionVolume(
 
     // 分支1：渐入 (Volume Up)
     if (target) {
+      //循环在这，定时器
       timer = setInterval(() => {
         if (!audio.value) {
           clearInterval(timer)
@@ -143,7 +136,7 @@ function transitionVolume(
       // 真正静音后，才执行原生 pause
       if (audio.value.volume <= 0) {
         clearInterval(timer)
-        originPause.call(audio.value) // <--- 真正的物理暂停
+        originPause.call(audio.value) // <--- 真正的物理暂停 我们之前只是让声音为0，调用原生而不是自己，掉自己会递归死循环
         audio.value.volume = volume // 恢复音量值，为下一次播放做准备
         resolve(undefined)
       }
@@ -196,7 +189,7 @@ function pause(isNeed: boolean = true, lengthen: boolean = false) {
 
 // 重置播放器
 const reset = (val: boolean) => {
-  music.state.currentTime = 0
+  music.state.currentTime = 0 //把进度条直接拉回起点
   isPlay.value = val
   transitionIsPlay.value = val
   // 暂停时锁住进度条，防止timeupdate事件导致进度条回弹
@@ -206,20 +199,7 @@ const reset = (val: boolean) => {
 // -----------------------------------------------------------------------------
 // 歌词系统区 Region: Lyric System
 // -----------------------------------------------------------------------------
-
-let player: LyricPlayer | null = null // 歌词播放器实例
-const cutSongHandler = () => {
-  initPlayer() // 重置歌词解析器
-  player?.setLyrics(music.state.lyric, music.state.noTimestamp) // 设置新歌词
-  executeListener('cutSong') // 触发切歌事件钩子
-}
-
-// 歌词点击回调
-function handleLyricClick(time: number) {
-  if (audio.value) {
-    audio.value.currentTime = time
-  }
-}
+let player: LyricPlayer | null = null // 歌词播放器实例 必须在函数外面定义，要不然找不到啊
 
 // 初始化歌词播放器
 function initPlayer() {
@@ -238,13 +218,26 @@ function initPlayer() {
   })
 }
 
+const cutSongHandler = () => {
+  initPlayer() // 重置歌词解析器
+  player?.setLyrics(music.state.lyric, music.state.noTimestamp) // 设置新歌词
+  executeListener('cutSong') // 触发切歌事件钩子 广播
+}
+
+// 歌词点击回调
+function handleLyricClick(time: number) {
+  if (audio.value) {
+    audio.value.currentTime = time
+  }
+}
+
 // -----------------------------------------------------------------------------
 // 进度与事件区 Region: Progress & Playback Events
 // -----------------------------------------------------------------------------
 
 // 进度条状态管理
 const timeState = ref({
-  stop: false, // 拖拽时锁死，防止进度条回弹
+  stop: false, // 拖拽时变为true锁死，防止进度条回弹
   previousTime: 0
 })
 
@@ -263,33 +256,11 @@ function seeked() {
   player?.syncIndex()
 }
 
-// 播放结束回调
-const end = () => {
-  emit('playEnd')
-}
-
-// 播放模式切换逻辑 (心动/循环/随机)
+// 播放模式切换逻辑 (循环/随机/单曲)
 const setOrderHandler = () => {
-  const runtimeList = music.state.runtimeList
   // 计算下一个模式的索引
   let newValue = (music.state.orderStatusVal + 1) % orderStatus.length
-
-  // 特殊逻辑：如果从"心动模式"切走，且当前列表是"我喜欢的"，则需要刷新列表
-  if (runtimeList?.specialType === 5 && music.state.orderStatusVal === 0 && newValue !== 0) {
-    getPlayListDetailFn(runtimeList.id as number, '', false)
-    music.updateTracks(
-      playListState.value.playList,
-      playListState.value.playList.map((item) => item.id)
-    )
-  }
-
-  // 特殊逻辑：只有"我喜欢的"歌单才能开启心动模式(0)
-  music.state.orderStatusVal =
-    newValue === 0 && runtimeList?.specialType !== 5
-      ? 1
-      : (newValue as typeof music.state.orderStatusVal)
-
-  music.getIntelliganceListHandler() // 获取心动模式推荐歌单
+  music.state.orderStatusVal = newValue as typeof music.state.orderStatusVal
 }
 
 // -----------------------------------------------------------------------------
@@ -297,10 +268,10 @@ const setOrderHandler = () => {
 // -----------------------------------------------------------------------------
 
 onMounted(() => {
-  initPlayer()
+  initPlayer() //歌词系统先跑起来
 
   // --- 关键黑魔法：方法劫持 (Monkey Patching) ---
-  // A. 备份原生方法
+  // A. 备份原生方法 !是非空断言
   originPlay = audio.value!.play as HTMLMediaElement['play']
   originPause = audio.value!.pause as HTMLMediaElement['pause']
 
@@ -342,31 +313,29 @@ defineExpose(exposeObj) // 挂载到 window.$audio 上的就是这个对象
 
 <template>
   <div class="bottom-container">
+    <!-- @timeupdate="timeupdate" 监听时间更新
+      @ended会尝试将原生event对象传入，不过由于playEnd不需要参数，这样写没问题   监听播放结束
+      @seeked="seeked"           监听拖动进度条 -->
     <audio
       ref="audio"
-      class="plyr-audio"
       :src="props.src"
       preload="auto"
       @timeupdate="timeupdate"
-      @ended="end"
+      @ended="music.playEnd()"
       @seeked="seeked"
-      @error="audioErrorHandler"
     />
     <DetailLeft :songs="props.songs" />
+    <!-- 监听子组件传来的事件 cut-song又往上传了一级-->
     <DetailCenter
       :order-status="orderStatus"
       :is-play="isPlay"
       :order-status-val="music.state.orderStatusVal"
       @play="play"
       @pause="pause"
-      @cut-song="(val) => emit('cutSong', val)"
+      @cut-song="(val) => music.cutSongHandler(val)"
       @set-order-handler="setOrderHandler"
     />
-    <DetailRight
-      :current-time="music.state.currentTime"
-      :songs="props.songs"
-      :audio="audio as any"
-    />
+    <DetailRight :current-time="music.state.currentTime" :songs="props.songs" :audio="audio" />
   </div>
   <div class="plan-container">
     <ProgressBar :songs="props.songs" />
@@ -374,6 +343,7 @@ defineExpose(exposeObj) // 挂载到 window.$audio 上的就是这个对象
 </template>
 
 <style lang="scss" scoped>
+/* 进度条的外壳 */
 .plan-container {
   display: flex;
   align-items: center;
@@ -382,13 +352,14 @@ defineExpose(exposeObj) // 挂载到 window.$audio 上的就是这个对象
   top: -8.5px;
   width: 100%;
 }
-
+/* 穿透修改 Element Plus 的抽屉样式 */
 :deep(.el-drawer) {
   height: 100%;
 }
+/* 播放器主体容器 */
 .bottom-container {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; /* 左中右三块分散对齐 */
   align-items: center;
   height: 100%;
   padding: 0 15px;
@@ -398,9 +369,11 @@ defineExpose(exposeObj) // 挂载到 window.$audio 上的就是这个对象
    * 2. 使用will-change提示浏览器预优化
    * 3. 使用transform开启GPU合成层
    */
+  /* 毛玻璃核心：背景模糊40px，饱和度提升180% (让颜色更鲜艳好看) */
   backdrop-filter: blur(40px) saturate(180%);
   will-change: backdrop-filter;
   transform: translate3d(0, 0, 0);
+  /*隐藏背面 (也是为了配合 GPU 加速，减少不必要的渲染计算) */
   backface-visibility: hidden;
 }
 </style>

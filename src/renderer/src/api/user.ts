@@ -1,5 +1,6 @@
 import request from '@/utils/request'
 
+//用户基础信息类型定义
 export type Profile = {
   avatarUrl: string // 用户头像
   backgroundUrl: string // 用户背景图片
@@ -15,7 +16,8 @@ export type Profile = {
   city: number // 城市id
   signature: string // 用户签名
 }
-export interface getUserAccountRes {
+//用户账号信息类型定义
+export interface GetUserAccountRes {
   account: {
     anonimousUser: boolean // 是否匿名用户
     createTime: number
@@ -23,9 +25,9 @@ export interface getUserAccountRes {
     id: number // 用户id
   }
   code: number
-  profile: Profile
+  profile: Profile //复用上面的
 }
-
+//为了适配歌手中的user字段
 export type User = {
   userId: number
   signature: string // 签名
@@ -36,7 +38,8 @@ export type User = {
   backgroundUrl: string // 用户背景
   avatarUrl: string // 用户头像
 }
-export interface getArtistDetailRes {
+//歌手详情信息类型定义
+export interface GetArtistDetailRes {
   message: string
   data: {
     artist: {
@@ -72,13 +75,13 @@ export interface getArtistDetailRes {
   }
   code: number
 }
-
-interface getUserDetailRes {
+//用户详情信息类型定义 复用上面的Profile
+interface GetUserDetailRes {
   code: number
   createDays: number
   createTime: number
   level: number // 等级
-  profile: Profile
+  profile: Profile //复用上面的
   userPoint: {
     balance: number
     blockBalance: number
@@ -90,14 +93,14 @@ interface getUserDetailRes {
 }
 // 获取用户详情  通过指定的uid获取指定用户详情信息
 export const getUserDetail = (uid: number) =>
-  request.get<getUserDetailRes>('/user/detail', { params: { uid } })
+  request.get<GetUserDetailRes>('/user/detail', { params: { uid } })
 
 // 获取账号信息
-export const getUserAccount = () => request.get<getUserAccountRes>('/user/account')
+export const getUserAccount = () => request.get<GetUserAccountRes>('/user/account')
 
 // 获取歌手详情
 export const getArtistDetail = (id: number) =>
-  request.get<getArtistDetailRes>('/artist/detail', { params: { id } })
+  request.get<GetArtistDetailRes>('/artist/detail', { params: { id } })
 
 // 获取用户绑定信息
 export const getUserBinding = (uid: number) => request.post('/user/binding', { uid })

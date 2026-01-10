@@ -4,7 +4,7 @@ import { useSettings } from '@/store/settings'
 import { setActivePinia } from 'pinia'
 import pinia from '@/store/store'
 
-// 激活 Pinia 实例，确保可以在非组件上下文中使用 store
+// 激活 Pinia 实例，确保可以在非vue组件中使用 store
 setActivePinia(pinia)
 
 // 获取全局设置 store，用于读取 API 基础地址
@@ -23,7 +23,7 @@ const request = axios.create({
 /**
  * 动态设置 API 基础地址
  * @param url - 新的基础 URL
- * 使用场景：用户在设置中切换服务器地址时调用
+ * 在设置中切换服务器地址时调用
  */
 export function setBaseURL(url: string) {
   request.defaults.baseURL = url
@@ -32,6 +32,7 @@ export function setBaseURL(url: string) {
 /**
  * 需要忽略状态码检查的接口路径列表
  * 这些接口可能返回特殊的状态码（如 800-803 二维码状态），需要业务层自行处理
+ * 通常如果接口返回的状态码不是 200，拦截器会认为出错了
  */
 const ignoreState = ['/login/qr/check']
 
@@ -55,7 +56,7 @@ request.interceptors.request.use(
     // POST 请求 url 必须添加时间戳,使每次请求 url 不一样,不然请求会被缓存
     /* 由于接口做了缓存处理 ( 缓存 2 分钟,不缓存数据极容易引起网易服务器高频 ip 错误 , 可在 app.js 设置 ,
    可能会导致登录后获取不到 cookie), 相同的 url 会在两分钟内只向网易服务器发一次请求 ,
-   如果遇到不需要缓 存结果的接口 , 可在请求 url 后面加一个时间戳参数使 url 不同 */
+   如果遇到不需要缓存结果的接口 , 可在请求 url 后面加一个时间戳参数使 url 不同 */
     config.params.timestamp = Date.now()
     return config
   },
@@ -70,6 +71,7 @@ request.interceptors.request.use(
  *
  * 重要：此拦截器直接返回 response.data 而非完整的 response 对象
  * 因此后续使用时无需再 .data，但也无法访问 status、headers 等信息
+ * 相当于拆了个包装，不用写.data了
  */
 request.interceptors.response.use(
   (response) => {
@@ -135,6 +137,7 @@ request.interceptors.response.use(
  * ✅ 优点：代码简洁，不需要每次 .data
  * ⚠️ 缺点：无法访问响应头、状态码等元数据
  * 💡 适用场景：大多数业务场景只需要数据，不需要响应元信息
+ * 就是为了让你在写代码时，.get<User>() 能享受到 User 类型的自动补全，而且红色波浪线不会乱报错。
  */
 interface CustomRequest {
   /** GET 请求 */

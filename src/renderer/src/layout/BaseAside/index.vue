@@ -17,7 +17,7 @@ import {
 } from '@/layout/BaseAside/animation'
 import ContextMenu from '@/components/ContextMenu/index.vue'
 import SongListCreator from '../../components/SongListCreator.vue'
-import { deletePlay } from '../../api/play'
+import { deletePlaylist } from '@/api/playlist'
 import { getUserPlayListFn } from '../../utils/userInfo'
 import { ElMessage } from 'element-plus'
 import Item from './item.vue'
@@ -37,7 +37,7 @@ const playlistMenuItems = [
 
 const deletePlayHandler = async (item) => {
   try {
-    const res = await deletePlay([item.id])
+    await deletePlaylist([item.id])
     getUserPlayListFn()
     ElMessage.success('删除成功')
   } catch {

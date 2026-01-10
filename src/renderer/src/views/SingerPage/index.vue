@@ -1,7 +1,7 @@
 ﻿<script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getArtistDetail, getArtistDetailRes } from '@/api/user'
+import { getArtistDetail, GetArtistDetailRes } from '@/api/user'
 import { getArtistAlbum, GetArtistAlbumRes } from '@/api/musicList'
 import AdaptiveListBox from '@/components/AdaptiveListBox/index.vue'
 import AdaptiveList from '@/components/AdaptiveList/index.vue'
@@ -9,13 +9,13 @@ import { tabsConfig } from '@/views/SingerPage/config'
 import { useTheme } from '@/store/theme'
 
 interface State {
-  singerDetail: getArtistDetailRes['data']
-  artist: getArtistDetailRes['data']['artist']
+  singerDetail: GetArtistDetailRes['data']
+  artist: GetArtistDetailRes['data']['artist']
   albums: GetArtistAlbumRes['hotAlbums']
 }
 const state = ref<State>({
-  singerDetail: {} as getArtistDetailRes['data'],
-  artist: {} as getArtistDetailRes['data']['artist'],
+  singerDetail: {} as GetArtistDetailRes['data'],
+  artist: {} as GetArtistDetailRes['data']['artist'],
   albums: []
 })
 // 修改为string类型，tab-pane的name属性可接受string类型

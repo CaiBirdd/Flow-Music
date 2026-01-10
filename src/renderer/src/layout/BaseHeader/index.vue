@@ -27,9 +27,13 @@ const go = () => {
   }
   router.go(1)
 }
+// 判断是否禁用“后退”
+// 逻辑：如果当前 count 是 1，说明已经在“栈底”（首页），不能再退了
 const backIsDisable = computed(() => {
   return +route.query.count! === 1
 })
+// 判断是否禁用“前进”
+// 逻辑：如果当前 count 是最大值，说明已经在“栈顶”，不能再进了
 const goIsDisable = computed(() => {
   return +route.query.count! === flags.maxCount
 })

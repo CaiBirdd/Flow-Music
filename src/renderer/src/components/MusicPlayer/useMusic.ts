@@ -4,7 +4,7 @@ import { likeMusicApi } from '@/api/musicList'
 import { ElMessage } from 'element-plus'
 import usePlayList from '@/layout/BaseAside/usePlayList'
 import { useMusicAction } from '@/store/music'
-import { deleteSong } from '@/api/play'
+import { updatePlaylistTracks } from '@/api/playlist'
 import { getUserPlayListFn } from '@/utils/userInfo'
 
 export default () => {
@@ -29,7 +29,7 @@ export default () => {
    * @param playId 这首歌所在的歌单 ID
    */
   const deleteSongHandler = async (id: number, playId: number) => {
-    const { code, message } = await deleteSong({
+    const { code, message } = await updatePlaylistTracks({
       op: 'del', // 操作类型：删除
       pid: playId, // 目标歌单
       tracks: id // 目标歌曲

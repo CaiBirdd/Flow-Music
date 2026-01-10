@@ -1,6 +1,6 @@
 <!-- 提供一个对话框用于创建歌单（标题、是否私密），提交后调用接口创建并刷新用户歌单列表。 -->
 <script setup lang="ts">
-import { createPlay } from '../api/play'
+import { createPlaylist } from '@/api/playlist'
 import { ref } from 'vue'
 import { getUserPlayListFn } from '../utils/userInfo'
 import { ElMessage } from 'element-plus'
@@ -16,7 +16,7 @@ const create = async () => {
   loading.value = true
   try {
     const isPrivacy = privacy.value ? '10' : ''
-    const res = await createPlay(desc.value, isPrivacy)
+    const res = await createPlaylist(desc.value, isPrivacy)
     getUserPlayListFn()
     closeDialog()
     ElMessage.success('创建成功')

@@ -11,7 +11,7 @@ import { useMusicAction } from '@/store/music'
 import Pagination from '@/components/Pagination/index.vue'
 import NotFound from '@/assets/not-found.png'
 import ContextMenu from '@/components/ContextMenu/index.vue'
-import { checkMusic } from '@/api/play'
+import { checkMusic } from '@/api/playlist'
 
 export interface Columns {
   title: string

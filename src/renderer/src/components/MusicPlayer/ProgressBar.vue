@@ -10,7 +10,7 @@ import { useMusicAction } from '@/store/music'
 import { useFlags } from '@/store/flags'
 
 interface Props {
-  songs: GetMusicDetailData // 传入歌曲详情数据，主要为了获取 songs.dt (总时长)
+  currentSong: GetMusicDetailData // 传入歌曲详情数据，主要为了获取 currentSong.dt (总时长)
 }
 const props = defineProps<Props>()
 const music = useMusicAction() // 以获取 currentTime (当前播放时间) 和 bgColor (封面颜色)
@@ -19,20 +19,20 @@ const flags = useFlags() //获取是否打开详情页
 /**
  * 进度条双向绑定值（0-100）
  * v-slider 组件需要的是 0-100 的数值，而音频播放使用的是“秒”
- * 使用 songs.dt（歌曲元数据时长，毫秒）替代 audio.duration
+ * 使用 currentSong.dt（歌曲元数据时长，毫秒）替代 audio.duration
  * 原因：window.$audio.el.duration 在某些时机获取不到正确值
  */
 const model = computed<number>({
   // Getter: 负责“读”，将当前秒数转换为百分比供 UI 显示
   get() {
-    const duration = props.songs.dt // 毫秒
+    const duration = props.currentSong.dt // 毫秒
     if (!duration) return 0
     // currentTime（秒）转毫秒后计算百分比
     return ((music.state.currentTime * 1000) / duration) * 100
   },
   set(val) {
     // Setter: 负责“写”，当用户拖动滑块时，将百分比还原为秒数并设置播放进度
-    const duration = props.songs.dt // 毫秒
+    const duration = props.currentSong.dt // 毫秒
     if (!duration) return
     // 百分比转秒，设置播放位置
     // window.$audio.el.currentTime 是原生 Audio 属性
@@ -52,7 +52,7 @@ const gradientColor2 = computed(() =>
 
 <template>
   <div
-    v-if="props.songs.ar"
+    v-if="props.currentSong.ar"
     :class="['base-progress-bar', flags.isOpenDetail ? 'detail-progress' : 'view-progress']"
     style="width: 100%"
     :style="{

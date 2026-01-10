@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { PlayList } from '@/api/musicList'
+import { PlaylistBase } from '@/api/musicList'
 import img from '@/assets/img.jpg'
 import { computed } from 'vue'
 import { useUserInfo } from '@/store'
@@ -11,7 +11,7 @@ type List = { label: string; name: string }[]
 interface Props {
   list: List
   modelValue: string
-  playList: PlayList[]
+  playList: PlaylistBase[]
   userId: number
   loading: boolean
 }
@@ -20,7 +20,7 @@ const props = defineProps<Props>()
 const router = useRouter()
 const store = useUserInfo()
 
-const cardClickHandler = (item: PlayList) => {
+const cardClickHandler = (item: PlaylistBase) => {
   router.push({
     path: '/play-list',
     query: {

@@ -27,7 +27,7 @@ const getRecordSongHandler = async () => {
         ...item.data
       }
     })
-    music.updateCurrentItem(playListMock)
+    music.updateViewingPlaylist(playListMock)
   } catch (e) {
     ElMessage.error(`获取最近歌曲失败: ${e}`)
   } finally {
@@ -49,7 +49,7 @@ init()
   <SongList
     :columns="columns"
     :loading="loading"
-    :songs="music.state.songs"
+    :current-song="music.state.currentSong"
     :list="recordSongList"
     :list-info="{}"
     :ids="ids"

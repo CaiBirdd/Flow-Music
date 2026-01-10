@@ -15,7 +15,7 @@ export default () => {
       const msg = isLike ? '添加喜欢成功' : '取消喜欢成功'
       const { getPlayListDetailFn } = usePlayList()
       // 获取当前正看着/听着的这个歌单ID
-      const playId = music.state.currentItem?.id
+      const playId = music.state.viewingPlaylist?.id
       if (playId) {
         getPlayListDetailFn(playId) //当喜欢/删除一首歌后，需要刷新歌单列表，让界面同步更新。
       }

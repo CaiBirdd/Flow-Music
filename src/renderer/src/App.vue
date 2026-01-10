@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, provide, useTemplateRef } from 'vue'
+import { onMounted, ref, provide, useTemplateRef, watch } from 'vue'
 import { useMusicAction } from '@/store/music'
 import { getUserAccountFn } from '@/utils/userInfo'
 import { useFlags } from '@/store/flags'
@@ -41,14 +41,17 @@ onMounted(() => {
     document.body.classList.add('bold')
   }
 })
-store.addEvent('login', () => {
-  refresh.value = refresh.value + 1
-})
+watch(
+  () => store.isLogin,
+  () => {
+    refresh.value = refresh.value + 1
+  }
+)
 getUserAccountFn()
 </script>
 
 <template>
-  <div id="opacity-bg" style="position: fixed; width: 100%; height: 100%; transition: 0.5s"></div>
+  <div id="opacity-bg0" style="position: fixed; width: 100%; height: 100%; transition: 0.5s"></div>
   <div id="opacity-bg1" style="position: fixed; width: 100%; height: 100%; transition: 0.5s"></div>
   <MusicDetail />
   <PlayListDrawer />
@@ -71,7 +74,7 @@ getUserAccountFn()
       <teleport :disabled="!flags.isOpenDetail" to=".music-detail-container .music-detail-bottom">
         <MusicPlayer
           ref="audioInstance"
-          :songs="music.state?.songs"
+          :current-song="music.state?.currentSong"
           :src="music.state.musicUrl"
         ></MusicPlayer>
       </teleport>

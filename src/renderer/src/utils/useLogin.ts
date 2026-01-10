@@ -21,7 +21,7 @@ export const codeLogin = async (phone: string, code: string): Promise<any> => {
   localStorage.setItem('token', data.token)
   setCookies(data.cookie)
   getUserPlayListFn()
-  store.loginCallBack()
+
   return data
 }
 

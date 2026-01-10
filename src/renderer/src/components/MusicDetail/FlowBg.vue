@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { colorExtraction, gradualChange, useRhythm } from '@/components/MusicDetail/useMusic'
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch, useTemplateRef } from 'vue'
 import { findBestColors, toggleImg } from '@/utils'
 import { useMusicAction } from '@/store/music'
 import { useSettings } from '@/store/settings'
@@ -18,8 +18,8 @@ const music = useMusicAction() // music: 负责管音乐播放。这里主要用
 const settings = useSettings() // settings: 负责管设置。这里主要用它来获取用户设置的"歌词背景"模式。
 const flags = useFlags() // flags: 负责管全局状态。这里主要用它来判断详情页是否打开（休眠机制）。
 
-// 保存 rhythmBox 和 splitImg 引用，供唤醒时使用 存 useMusic.ts 里返回的工具，留着切歌时用
-let rhythmBoxRef: HTMLDivElement | null = null
+// 保存 splitImg 引用，供唤醒时使用
+const rhythmBoxRef = useTemplateRef<HTMLDivElement>('rhythmBox')
 let splitImgFn: ((img: HTMLImageElement) => void) | null = null
 
 /**
@@ -53,9 +53,10 @@ const executeLightRender = (bg: string) => {
 }
 
 onMounted(() => {
-  // 拿到那个用来放旋转碎片的 div 容器
-  rhythmBoxRef = document.querySelector('#rhythm-box') as HTMLDivElement
-  const { splitImg } = useRhythm(rhythmBoxRef)
+  // 使用 useTemplateRef
+  // 获取存放旋转节律背景碎片的 rhythm-box 容器（更符合 Vue 数据驱动理念）
+  if (!rhythmBoxRef.value) return
+  const { splitImg } = useRhythm(rhythmBoxRef.value)
   splitImgFn = splitImg
 
   // 图片切换时，更新流动背景
@@ -109,7 +110,7 @@ onMounted(() => {
   <div class="flow-bg-container">
     <div id="gradual1" />
     <div id="gradual2" />
-    <div v-show="settings.state.lyricBg === 'rhythm'" id="rhythm-box" />
+    <div v-show="settings.state.lyricBg === 'rhythm'" id="rhythm-box" ref="rhythmBox" />
   </div>
 </template>
 

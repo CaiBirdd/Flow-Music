@@ -13,7 +13,7 @@ const correctHeight = ref<number>(0)
 // 从 store 中获取当前歌曲的封面图，传给 FlowBg 和 LyricDisplay
 // 这样两个子组件就能拿到同一张图：一个做模糊背景，一个做歌曲封面展示
 const bg = computed(() => {
-  return music.state.songs?.al?.picUrl || ''
+  return music.state.currentSong?.al?.picUrl || ''
 })
 //关闭详情页
 const closeDetail = () => {
@@ -41,8 +41,8 @@ onUnmounted(() => {
           <LyricDisplay
             :lyric="music.state.lyric"
             :bg="bg"
-            :title="music.state.songs.name"
-            :ar="music.state.songs.ar"
+            :title="music.state.currentSong.name"
+            :ar="music.state.currentSong.ar"
             :video-play-url="music.state.videoPlayUrl"
           />
           <div

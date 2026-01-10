@@ -108,8 +108,8 @@ export const isString = (value: any): value is string => {
  * 切换图片过渡 (防止图片闪烁，并进行内存优化)
  * 返回一个 Promise，只有当图片加载成功后才 resolve
  * 作用是：
- * 1. 预加载图片
- * 2. 避免图片闪烁
+ * 1. 预加载图片，保证后续提取颜色有图片数据
+ * 2. 避免图片闪烁，图片加载中就去操作会导致闪烁或报错
  * 3. 优化内存使用
  */
 export function toggleImg(src: string, size?: string): Promise<HTMLImageElement> {
@@ -127,7 +127,7 @@ export function toggleImg(src: string, size?: string): Promise<HTMLImageElement>
 
   return new Promise((resolve, reject) => {
     img.onload = () => {
-      // 加载完成后，断开事件引用，帮助 JS 垃圾回收机制回收内存
+      // 图片下载完resolve
       img.onload = null
       img.onerror = null
       resolve(img)

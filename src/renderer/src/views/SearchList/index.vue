@@ -121,7 +121,7 @@ watch(
     is-loading-endflyback
     :loading="loading"
     :columns="columns"
-    :songs="music.state.songs"
+    :current-song="music.state.currentSong"
     :list="state.songs.result"
     :list-info="{ id: 'search', name: '搜索结果' }"
     :ids="state.songs.result.map((item) => item.id)"

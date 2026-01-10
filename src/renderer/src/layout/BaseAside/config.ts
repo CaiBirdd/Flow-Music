@@ -1,21 +1,15 @@
-import { PlayList } from '@/api/musicList'
+import { PlaylistBase } from '@/api/musicList'
 
-export const paths = [
-  '/home',
-  '/fm',
-  '/video',
-  '/follow',
-  '/local',
-  '/lately',
-  '/play-list',
-  '/cloud'
-]
+// 定义所有的路由路径白名单
+export const paths = ['/home', '/lately', '/play-list', '/cloud']
+// 定义每个菜单项（每一行）的结构
 export type ListItem = {
   name: string
   icon: string
   path: (typeof paths)[number]
   asideFontSize?: number
-} & Partial<PlayList>
+} & Partial<PlaylistBase> // 这里混入 PlaylistBase 类型是因为歌单项也是菜单项，而歌单有很多额外属性（如封面图、ID等）
+// 定义菜单组（Menu Group）的结构
 export interface MenuConfig {
   title: '我的音乐' | '创建的歌单' | '收藏的歌单' | false
   mark: 'my' | 'play' | 'subscribedList' | false
@@ -24,16 +18,13 @@ export interface MenuConfig {
   type?: 'collapsed' | 'tiled'
   isCollapsed?: boolean
 }
+// 全局统一侧边栏字体大小
 export const asideFontSize = 14
-export const needUseComparisonPaths = [
-  '/home',
-  '/fm',
-  '/video',
-  '/follow',
-  '/local',
-  '/lately',
-  '/cloud'
-]
+// 需要高亮对比的路径
+// 用于判断当前路由是否需要激活某个菜单项的高亮状态。
+export const needUseComparisonPaths = ['/home', '/lately', '/cloud']
+// 初始状态的侧边栏配置
+// 这是一个数组，每一个对象代表一个“区块”。
 export const originAsideMenuConfig: MenuConfig[] = [
   {
     title: false,
@@ -47,40 +38,12 @@ export const originAsideMenuConfig: MenuConfig[] = [
         asideFontSize,
         id: 1
       }
-      // {
-      //   name: '云音乐精选',
-      //   icon: 'icon-headphone-fill',
-      //   path: '/fm',
-      //   asideFontSize,
-      //   id: 2,
-      // },
-      // {
-      //   name: '博客',
-      //   icon: '',
-      //   path: '/video',
-      //   asideFontSize,
-      //   id: 3,
-      // },
-      // {
-      //   name: '社区',
-      //   icon: '',
-      //   path: '/follow',
-      //   asideFontSize,
-      //   id: 4,
-      // },
     ]
   },
   {
     title: false,
     mark: 'my',
     list: [
-      // {
-      //   name: '本地与下载',
-      //   icon: 'icon-xiazaibendi',
-      //   path: '/local',
-      //   asideFontSize,
-      //   id: 5,
-      // },
       {
         name: '最近播放',
         icon: 'icon-zuijinlaifang',

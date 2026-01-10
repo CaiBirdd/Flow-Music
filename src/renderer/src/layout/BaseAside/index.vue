@@ -147,7 +147,7 @@ const login = () => {
   flags.isOpenLogin = true
 }
 const collapsedHandler = (item) => {
-  item.isCollapsed = !item.isCollapsed
+  store.toggleCollapse(item.mark)
 }
 const dialog = ref(false)
 const openDialog = () => {
@@ -178,11 +178,13 @@ const openDialog = () => {
           v-if="menuItem.show"
           :class="['lump', { 'collapsed-lump': menuItem.type === 'collapsed' }]"
         >
-          <div v-if="menuItem.title && menuItem.list.length" class="title">
-            <span @click="menuItem.type === 'collapsed' && collapsedHandler(menuItem)">{{
-              menuItem.title
-            }}</span>
-            <v-icon class="plus" icon="mdi-plus" @click="openDialog" />
+          <div
+            v-if="menuItem.title && menuItem.list.length"
+            class="title"
+            @click="menuItem.type === 'collapsed' && collapsedHandler(menuItem)"
+          >
+            <span>{{ menuItem.title }}</span>
+            <v-icon class="plus" icon="mdi-plus" @click.stop="openDialog" />
           </div>
           <template v-if="menuItem.type === 'collapsed'">
             <transition

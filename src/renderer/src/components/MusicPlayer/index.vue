@@ -48,7 +48,7 @@ export interface MusicPlayerInstanceType {
 interface Props {
   src: string // 音乐文件 URL
   ids?: number[] // 歌曲 ID 列表
-  songs: GetMusicDetailData // 歌曲详情数据
+  currentSong: GetMusicDetailData // 歌曲详情数据
 }
 
 // -----------------------------------------------------------------------------
@@ -324,7 +324,7 @@ defineExpose(exposeObj) // 挂载到 window.$audio 上的就是这个对象
       @ended="music.playEnd()"
       @seeked="seeked"
     />
-    <DetailLeft :songs="props.songs" />
+    <DetailLeft :current-song="props.currentSong" />
     <!-- 监听子组件传来的事件 cut-song又往上传了一级-->
     <DetailCenter
       :order-status="orderStatus"
@@ -335,10 +335,14 @@ defineExpose(exposeObj) // 挂载到 window.$audio 上的就是这个对象
       @cut-song="(val) => music.cutSongHandler(val)"
       @set-order-handler="setOrderHandler"
     />
-    <DetailRight :current-time="music.state.currentTime" :songs="props.songs" :audio="audio" />
+    <DetailRight
+      :current-time="music.state.currentTime"
+      :current-song="props.currentSong"
+      :audio="audio"
+    />
   </div>
   <div class="plan-container">
-    <ProgressBar :songs="props.songs" />
+    <ProgressBar :current-song="props.currentSong" />
   </div>
 </template>
 

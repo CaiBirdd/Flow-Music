@@ -5,7 +5,7 @@ import {
   GetMusicDetailData,
   GetUserCloudRes,
   GetUserCloudSong,
-  PlayList
+  PlaylistBase
 } from '@/api/musicList'
 import { columns } from './config'
 import SongList from '@/components/SongList/index.vue'
@@ -17,7 +17,7 @@ interface State {
   loading: boolean
   ids: number[]
   list: GetMusicDetailData[]
-  listInfo: PlayList | object
+  listInfo: PlaylistBase | object
   total: number
   page: number
   limit: number
@@ -47,7 +47,7 @@ async function getUserCloudFn() {
     state.value.ids.push(item.simpleSong.id)
     return item.simpleSong
   })
-  music.updateCurrentItem({ id: 'cloud-songs', tracks: state.value.list })
+  music.updateViewingPlaylist({ id: 'cloud-songs', tracks: state.value.list })
 }
 
 const currentChange = (val: number) => {
@@ -60,7 +60,7 @@ const currentChange = (val: number) => {
   <SongList
     is-loading-endflyback
     is-paging
-    :songs="music.state.songs"
+    :current-song="music.state.currentSong"
     :columns="columns"
     :loading="state.loading"
     :ids="state.ids"

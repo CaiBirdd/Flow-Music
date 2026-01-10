@@ -48,7 +48,7 @@ init()
   <SongList
     :columns="columns"
     :loading="playListState.loading"
-    :songs="music.state.songs"
+    :current-song="music.state.currentSong"
     :ids="playListState.ids"
     :list="playListState.playList"
     :list-info="playListState.listInfo"

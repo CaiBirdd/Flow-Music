@@ -1,7 +1,7 @@
 import ColorThief from 'colorthief'
 
 // 用于控制背景切换的双缓冲指针（0 或 1）
-let pointer = 1
+let activeLayerIndex = 1
 
 /**
  * 颜色提取函数 用来根据专辑封面动态生成背景渐变色，让界面风格与歌曲封面保持一致
@@ -29,14 +29,14 @@ export function gradualChange(img: HTMLImageElement, rgb: Array<Array<string>>) 
   }
   //传入了图片，需要设置渐变背景
   if (img) {
-    if (pointer === 0) {
+    if (activeLayerIndex === 0) {
       // 指针为 0，操作 gradual1 显示，gradual2 隐藏
       // 设置 CSS 线性渐变：从 rgb[0] 渐变到 rgb[1]
       gradual1.style.backgroundImage = `linear-gradient(rgb(${rgb[0]}), rgb(${rgb[1]}))`
       gradual1.style.opacity = '1'
 
       gradual2.style.opacity = '0'
-      pointer = 1 // 切换指针，下次轮到 gradual2 显示
+      activeLayerIndex = 1 // 切换指针，下次轮到 gradual2 显示
     } else {
       // 指针为 1，操作 gradual2 显示，gradual1 隐藏
       // 设置 CSS 线性渐变：从 rgb[0] 渐变到 rgb[1]
@@ -44,22 +44,22 @@ export function gradualChange(img: HTMLImageElement, rgb: Array<Array<string>>) 
       gradual2.style.opacity = '1'
 
       gradual1.style.opacity = '0'
-      pointer = 0 // 切换指针，下次轮到 gradual1 显示
+      activeLayerIndex = 0 // 切换指针，下次轮到 gradual1 显示
     }
   } else {
     //没有图片，逻辑同上，只是把背景置空
-    if (pointer === 0) {
+    if (activeLayerIndex === 0) {
       gradual1.style.backgroundImage = ``
       gradual1.style.opacity = '1'
 
       gradual2.style.opacity = '0'
-      pointer = 1
+      activeLayerIndex = 1
     } else {
       gradual2.style.backgroundImage = ``
       gradual2.style.opacity = '1'
 
       gradual1.style.opacity = '0'
-      pointer = 0
+      activeLayerIndex = 0
     }
   }
 }

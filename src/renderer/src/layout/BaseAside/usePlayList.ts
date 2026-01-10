@@ -1,13 +1,13 @@
 //封装获取与维护当前歌单（或日推）数据的逻辑：调用音乐相关 API 拉取歌单/专辑歌曲详情、整理为播放列表状态，并同步到全局 store（用户/播放相关 store）
 import { ref } from 'vue'
 import {
-  CurrentItem,
+  QueuePlaylist,
   getAlbumContent,
   getLikeMusicListIds,
   getMusicDetail,
   GetMusicDetailData,
   getPlayListDetail,
-  PlayList
+  PlaylistBase
 } from '@/api/musicList'
 import { useUserInfo } from '@/store'
 import { useMusicAction } from '@/store/music'
@@ -16,14 +16,14 @@ import { recommendSong } from '@/api/home'
 
 interface State {
   playList: GetMusicDetailData[]
-  listInfo: PlayList
+  listInfo: PlaylistBase
   ids: number[]
   loading: boolean
 }
 
 export const playListState = ref<State>({
   playList: [],
-  listInfo: {} as PlayList,
+  listInfo: {} as PlaylistBase,
   ids: [],
   loading: false
 })
@@ -52,11 +52,13 @@ export default () => {
           playList = songs
           ids = playList.map((item) => item.id).join(',')
         } else {
-          const { playlist } = await getPlayListDetail(id)
+          const res = await getPlayListDetail(id)
+          console.log(res)
+          const { playlist } = res
           playList = playlist
           ids = playList.trackIds.map((item) => item.id).join(',')
         }
-        music.updateCurrentItem(playList)
+        music.updateViewingPlaylist(playList)
         const { songs } = await getMusicDetail(ids)
         updatePlayList({ ...playList, tracks: songs })
       } else {
@@ -73,13 +75,13 @@ export default () => {
     updatePlayList(playListMock)
     return data
   }
-  const updatePlayList = async (list: CurrentItem) => {
+  const updatePlayList = async (list: QueuePlaylist) => {
     playListState.value.playList = list.tracks
     playListState.value.ids = list.tracks.map((item) => item.id)
     // 过滤掉track属性
     const { tracks, ...args } = list
     playListState.value.listInfo = args as any
-    music.updateCurrentItem(list)
+    music.updateViewingPlaylist(list)
     getLikeMusicIds()
   }
   const getLikeMusicIds = async () => {

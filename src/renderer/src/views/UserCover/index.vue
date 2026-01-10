@@ -58,7 +58,7 @@ const getUserRecordHandler = async (type: number) => {
     state.value.recent = data
     recentIds.value = data.map((item) => item.id)
   }
-  music.updateCurrentItem({ id: 'userCover', tracks: data })
+  music.updateViewingPlaylist({ id: 'userCover', tracks: data })
 }
 
 async function init() {
@@ -81,7 +81,7 @@ init()
     <SongList
       :columns="columns"
       :loading="loading"
-      :songs="music.state.songs"
+      :current-song="music.state.currentSong"
       :ids="recentIds"
       :list="state.recent"
       :is-need-title="false"
@@ -93,7 +93,7 @@ init()
     <SongList
       :columns="columns"
       :loading="loading"
-      :songs="music.state.songs"
+      :current-song="music.state.currentSong"
       :ids="historyIds"
       :list="state.history"
       :is-need-title="false"

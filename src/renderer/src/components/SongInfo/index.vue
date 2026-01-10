@@ -14,7 +14,7 @@ const theme = useTheme()
 const router = useRouter()
 
 watch(
-  () => music.state.currentItem?.coverImgUrl,
+  () => music.state.viewingPlaylist?.coverImgUrl,
   (val) => {
     if (val) {
       toggleImg(val, '350y350').then((img) => {
@@ -22,7 +22,7 @@ watch(
           left.value!.style.backgroundImage = `url(${img.src})`
         }
       })
-      // const src = music.state.currentItem.specialType === 5 ? '' : val
+      // const src = music.state.viewingPlaylist.specialType === 5 ? '' : val
       theme.change(val)
     }
   },
@@ -35,7 +35,7 @@ const gotoUserDetail = () => {
   router.push({
     path: '/user-detail',
     query: {
-      uid: music.state.currentItem?.userId
+      uid: music.state.viewingPlaylist?.userId
     }
   })
 }
@@ -43,11 +43,11 @@ const gotoUserDetail = () => {
 </script>
 
 <template>
-  <div v-if="music.state.currentItem?.coverImgUrl" class="list-info">
+  <div v-if="music.state.viewingPlaylist?.coverImgUrl" class="list-info">
     <div>
       <div ref="left" class="left">
         <span class="count">
-          {{ formatNumberToMillion(music.state.currentItem?.playCount || 0) }}
+          {{ formatNumberToMillion(music.state.viewingPlaylist?.playCount || 0) }}
         </span>
       </div>
     </div>
@@ -55,22 +55,22 @@ const gotoUserDetail = () => {
     <div class="right">
       <div class="song-name">
         <div class="tag">歌单</div>
-        <div class="name">{{ music.state.currentItem?.name }}</div>
+        <div class="name">{{ music.state.viewingPlaylist?.name }}</div>
       </div>
       <div class="song-info">
         <div
-          :style="{ backgroundImage: `url(${music.state.currentItem?.creator?.avatarUrl})` }"
+          :style="{ backgroundImage: `url(${music.state.viewingPlaylist?.creator?.avatarUrl})` }"
           class="avatar"
         ></div>
         <div class="nickname" @click="gotoUserDetail">
-          {{ music.state.currentItem?.creator?.nickname }}
+          {{ music.state.viewingPlaylist?.creator?.nickname }}
         </div>
         <div class="create-timer">
-          {{ formatDate(music.state.currentItem?.createTime || 0, 'YY-MM-DD hh:mm:ss') }}创建
+          {{ formatDate(music.state.viewingPlaylist?.createTime || 0, 'YY-MM-DD hh:mm:ss') }}创建
         </div>
       </div>
-      <span v-if="(music.state.currentItem as any)?.description" class="text-info-desc">
-        {{ (music.state.currentItem as any)?.description }}
+      <span v-if="(music.state.viewingPlaylist as any)?.description" class="text-info-desc">
+        {{ (music.state.viewingPlaylist as any)?.description }}
       </span>
 
       <div class="song-handle">
@@ -85,11 +85,11 @@ const gotoUserDetail = () => {
       <!--      <div class="song-count">-->
       <!--        <div class="p1">-->
       <!--          <span>歌曲 : </span>-->
-      <!--          <span class="total">{{ music.currentItem.trackCount }}</span>-->
+      <!--          <span class="total">{{ music.viewingPlaylist.trackCount }}</span>-->
       <!--        </div>-->
       <!--        <div class="p2">-->
       <!--          <span>播放 : </span>-->
-      <!--          <span class="count">{{ music.currentItem.playCount }}</span>-->
+      <!--          <span class="count">{{ music.viewingPlaylist.playCount }}</span>-->
       <!--        </div>-->
       <!--      </div>-->
     </div>

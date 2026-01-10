@@ -31,7 +31,7 @@ watch(
     :key="String(route.query.id ?? '')"
     :columns="columns"
     :loading="playListState.loading"
-    :songs="music.state.songs"
+    :current-song="music.state.currentSong"
     :ids="playListState.ids"
     :list="playListState.playList"
     :list-info="playListState.listInfo"

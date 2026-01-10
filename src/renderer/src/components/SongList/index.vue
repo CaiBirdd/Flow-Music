@@ -4,7 +4,7 @@
 import { h, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { lookup } from '@/utils'
-import { GetMusicDetailData, PlayList } from '@/api/musicList'
+import { GetMusicDetailData, PlaylistBase } from '@/api/musicList'
 import { useUserInfo } from '@/store'
 import useMusic from '@/components/MusicPlayer/useMusic'
 import { useMusicAction } from '@/store/music'
@@ -35,11 +35,11 @@ const playlistMenuItems = [
 ]
 interface Props {
   list: GetMusicDetailData[]
-  songs: GetMusicDetailData
+  currentSong: GetMusicDetailData
   columns: Columns[]
   loading?: boolean
   ids?: number[]
-  listInfo?: PlayList | any
+  listInfo?: PlaylistBase | any
   scroll?: boolean
   isPaging?: boolean
   total?: number
@@ -102,11 +102,11 @@ const playHandler = async (item: GetMusicDetailData, index: number) => {
     return
   }
 
-  if (music.state.runtimeList?.id === music.state.currentItem?.id) {
-    if (window.$audio.isPlay && props.songs.id === item.id) {
+  if (music.state.playQueue?.id === music.state.viewingPlaylist?.id) {
+    if (window.$audio.isPlay && props.currentSong.id === item.id) {
       return
     }
-    if (!window.$audio.isPlay && props.songs.id === item.id) {
+    if (!window.$audio.isPlay && props.currentSong.id === item.id) {
       return window.$audio.play()
     }
   }
@@ -114,9 +114,9 @@ const playHandler = async (item: GetMusicDetailData, index: number) => {
   id.value = item.id
   emit('play', item, index)
 
-  // 如果传入了listInfo和ids，总是更新runtimeList，确保当前播放列表上下文正确
+  // 如果传入了listInfo和ids，总是更新playQueue，确保当前播放列表上下文正确
   if (props.ids && props.listInfo) {
-    music.updateRuntimeList({ tracks: props.list, ...props.listInfo }, props.ids)
+    music.updatePlayQueue({ tracks: props.list, ...props.listInfo }, props.ids)
   }
 }
 
@@ -132,9 +132,9 @@ const activeText = (item: GetMusicDetailData) => {
   if (item.id === undefined) {
     return false
   } else if (props.listInfo) {
-    return item.id === props.songs.id && props.listInfo.id === music.state.runtimeList?.id
+    return item.id === props.currentSong.id && props.listInfo.id === music.state.playQueue?.id
   } else {
-    return item.id === props.songs.id
+    return item.id === props.currentSong.id
   }
 }
 

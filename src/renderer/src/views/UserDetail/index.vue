@@ -6,7 +6,7 @@ import { onUnmounted, ref, watch } from 'vue'
 import { province } from 'province-city-china/data'
 import UserDetailList from '@/components/UserDetailList/index.vue'
 import { list } from '@/views/UserDetail/config'
-import { getUserPlayList, PlayList } from '@/api/musicList'
+import { getUserPlayList, PlaylistBase } from '@/api/musicList'
 import { useUserInfo } from '@/store'
 import { useTheme } from '@/store/theme'
 
@@ -15,8 +15,8 @@ interface State {
   identify: {
     level: number
   }
-  playList: PlayList[]
-  allPlayList: PlayList[]
+  playList: PlaylistBase[]
+  allPlayList: PlaylistBase[]
 }
 
 const router = useRouter()

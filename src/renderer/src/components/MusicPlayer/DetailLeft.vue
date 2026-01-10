@@ -7,7 +7,7 @@ import { useRouter } from 'vue-router'
 import { GetMusicDetailData } from '@/api/musicList' // 类型定义：确保接收到的 songs 数据格式正确
 
 interface Props {
-  songs: GetMusicDetailData // 接收父组件传来的“当前播放歌曲”详情对象
+  currentSong: GetMusicDetailData // 接收父组件传来的“当前播放歌曲”详情对象
 }
 
 const props = defineProps<Props>()
@@ -17,11 +17,11 @@ const store = useUserInfo()
 const router = useRouter()
 //动态判断当前歌曲是否“已喜欢”
 const isLike = computed(() => {
-  return store.userLikeIds.includes(props.songs.id)
+  return store.userLikeIds.includes(props.currentSong.id)
 })
 //当前歌曲 ID 的简单包装（为了传参方便）
 const id = computed(() => {
-  return props.songs.id
+  return props.currentSong.id
 })
 // 动作：展开详情页
 const openMusicDetail = () => {
@@ -36,7 +36,7 @@ const gotoComment = () => {
   router.push({
     path: '/comment',
     query: {
-      id: props.songs.id
+      id: props.currentSong.id
     }
   })
   flags.isOpenDetail = false
@@ -48,7 +48,7 @@ const gotoComment = () => {
   <div v-show="!flags.isOpenDetail" class="left">
     <div class="picture-box" @click="openMusicDetail">
       <div
-        :style="{ backgroundImage: `url(${props.songs.al?.picUrl + '?param=150y150'})` }"
+        :style="{ backgroundImage: `url(${props.currentSong.al?.picUrl + '?param=150y150'})` }"
         class="picture"
       ></div>
       <!-- 遮罩层 hover有向上展开箭头 -->
@@ -57,12 +57,12 @@ const gotoComment = () => {
     </div>
     <!-- 信息区域：歌名 + 歌手名 -->
     <div class="name-info">
-      <span class="song-name">{{ props.songs.name }}</span>
+      <span class="song-name">{{ props.currentSong.name }}</span>
       <div class="name-container">
-        <template v-for="(item, i) in props.songs.ar" :key="item.id">
+        <template v-for="(item, i) in props.currentSong.ar" :key="item.id">
           <span class="name">{{ item.name }}</span>
           <!-- 最后一个名字后面不要加斜杠 -->
-          <span v-if="i === 0 && i !== props.songs.ar.length - 1">/</span>
+          <span v-if="i === 0 && i !== props.currentSong.ar.length - 1">/</span>
         </template>
       </div>
     </div>

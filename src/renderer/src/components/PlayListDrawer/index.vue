@@ -14,16 +14,16 @@ const music = useMusicAction()
     <div class="head">
       <div class="left">
         <span class="text">播放列表</span>
-        <span class="count">{{ music.state.runtimeIds.length }}</span>
+        <span class="count">{{ music.state.playQueueIds.length }}</span>
       </div>
     </div>
     <SongList
       :columns="columns as any"
       :loading="playListState.loading"
-      :songs="music.state.songs as any"
-      :ids="music.state.runtimeIds"
-      :list="music.state.runtimeList?.tracks || []"
-      :list-info="music.state.runtimeList"
+      :current-song="music.state.currentSong as any"
+      :ids="music.state.playQueueIds"
+      :list="music.state.playQueue?.tracks || []"
+      :list-info="music.state.playQueue"
       :lazy="true"
       :is-need-title="false"
       :scroll="true"

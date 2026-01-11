@@ -29,7 +29,6 @@ export interface Columns {
 }
 
 const playlistMenuItems = [
-  { label: '收藏歌曲', value: 'collection' },
   { label: '评论', value: 'comment' },
   { label: '删除歌曲', value: 'delete' }
 ]
@@ -79,8 +78,6 @@ const formatCount = (index: number) => {
 
 const handlePlaylistMenuSelect = (item: { label: string; value: string }, row) => {
   switch (item.value) {
-    case 'collection':
-      break
     case 'delete':
       deleteSongHandler(row.id, props.listInfo.id)
       break

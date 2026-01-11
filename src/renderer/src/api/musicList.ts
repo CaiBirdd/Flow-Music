@@ -63,6 +63,7 @@ interface GetMusicUrlRes {
 // 这是前端自己维护的一个对象，代表“当前正在播放的列表”
 // Omit<Partial<PlaylistBase>, 'id'>: 继承大部分歌单属性但设为可选，且剔除 id
 // & { id... }: 重新把 id 定义为 number|string（为了兼容特殊 ID）
+//只有如下内容必选，其他可选
 export interface QueuePlaylist extends Omit<Partial<PlaylistBase>, 'id'> {
   id: number | string // 歌单ID，可能是数字也是字符串
   tracks: GetMusicDetailData[] // 必有的歌曲列表

@@ -16,7 +16,7 @@ export const useSettings = defineStore('settingsId', () => {
     baseUrl: import.meta.env.VITE_URL, // 默认 API 地址从 .env 文件读取
     lyricBg: 'rhythm',
     bold: true,
-    font: 'Helvetica, Avenir, Arial, sans-serif'
+    font: 'Avenir, Helvetica, Arial,sans-serif'
   })
   // 深拷贝一份 state 的初始值，用于后续的“重置设置”功能
   const initialState = JSON.parse(JSON.stringify(state.value))

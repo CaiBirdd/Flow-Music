@@ -4,25 +4,21 @@
 <script setup lang="ts" name="BaseAside">
 import { ref, watch } from 'vue'
 import { useUserInfo } from '@/store'
+import { useMusicAction } from '@/store/music'
 import { useFlags } from '@/store/flags'
 import { useRoute, useRouter } from 'vue-router'
 import { ListItem, needUseComparisonPaths, paths } from '@/layout/BaseAside/config'
-import {
-  afterEnter,
-  afterLeave,
-  beforeEnter,
-  beforeLeave,
-  enter,
-  leave
-} from '@/layout/BaseAside/animation'
+
 import ContextMenu from '@/components/ContextMenu/index.vue'
 import SongListCreator from '../../components/SongListCreator.vue'
 import { deletePlaylist } from '@/api/playlist'
+import { getPlayListDetail, QueuePlaylist } from '@/api/musicList'
 import { getUserPlayListFn } from '../../utils/userInfo'
 import { ElMessage } from 'element-plus'
 import Item from './item.vue'
 
 const store = useUserInfo()
+const musicStore = useMusicAction()
 const flags = useFlags()
 const current = ref<ListItem>()
 
@@ -31,8 +27,8 @@ const route = useRoute()
 
 // 添加右键菜单配置
 const playlistMenuItems = [
-  { label: '删除此列表', value: 'delete' },
-  { label: '编辑歌单', value: 'edit' }
+  { label: '播放', value: 'play' },
+  { label: '删除此列表', value: 'delete' }
 ]
 
 const deletePlayHandler = async (item) => {
@@ -52,14 +48,33 @@ const handlePlaylistMenuSelect = (
     case 'play':
       // 播放该歌单
       itemClick(playlistItem)
+      // 断言 id 存在，因为只有歌单项（mark === 'play'）才会显示此菜单
+      playWholeList(playlistItem.id as number)
       break
     case 'delete':
       // 从播放列表移除
       deletePlayHandler(playlistItem)
       break
-    case 'edit':
-      // 编辑歌单
-      break
+  }
+}
+
+//播放整个歌单的逻辑
+const playWholeList = async (id: number) => {
+  //获取歌单详情（包含 trackIds 和 完整的 tracks）
+  const { playlist } = await getPlayListDetail(id)
+  //构造播放队列对象
+  const list = {
+    id: playlist.id,
+    tracks: playlist.tracks
+  }
+  //更新全局播放队列
+  musicStore.updatePlayQueue(
+    list as QueuePlaylist,
+    playlist.tracks.map((item) => item.id)
+  )
+  //立即播放第一首歌曲
+  if (playlist.tracks.length > 0) {
+    musicStore.getMusicUrlHandler(playlist.tracks[0])
   }
 }
 
@@ -99,9 +114,6 @@ const itemClick = (item: ListItem) => {
     // 防止上一次current没有id导致下面判断path出问题
     current.value?.id && (current.value = item)
   }
-  // if(item.path === current.value?.path) {
-  //   return
-  // }
   router.push({
     path: item.path,
     query: {
@@ -187,25 +199,8 @@ const openDialog = () => {
             <v-icon class="plus" icon="mdi-plus" @click.stop="openDialog" />
           </div>
           <template v-if="menuItem.type === 'collapsed'">
-            <transition
-              name="height-fade"
-              @before-enter="beforeEnter"
-              @enter="enter"
-              @after-enter="afterEnter"
-              @before-leave="beforeLeave"
-              @leave="leave"
-              @after-leave="afterLeave"
-            >
-              <div
-                v-show="menuItem.isCollapsed"
-                :class="[
-                  {
-                    collapsed: menuItem.type === 'collapsed',
-                    'tree-open': menuItem.isCollapsed === true,
-                    'tree-close': menuItem.isCollapsed === false
-                  }
-                ]"
-              >
+            <div class="collapse-wrapper" :class="{ expanded: menuItem.isCollapsed }">
+              <div class="collapse-inner">
                 <template v-for="item in menuItem.list" :key="item.id">
                   <ContextMenu
                     v-if="menuItem.mark === 'play'"
@@ -226,7 +221,7 @@ const openDialog = () => {
                   />
                 </template>
               </div>
-            </transition>
+            </div>
           </template>
           <template v-else>
             <Item
@@ -245,16 +240,23 @@ const openDialog = () => {
 </template>
 
 <style lang="scss" scoped>
-.height-fade-enter-active,
-.height-fade-leave-active {
+.collapse-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease;
   overflow: hidden;
-  transition: height 0.3s ease;
-}
-.height-fade-enter, .height-fade-leave-to /* .height-fade-leave-active in <2.1.8 */ {
-  height: 0;
+
+  &.expanded {
+    grid-template-rows: 1fr;
+  }
+
+  .collapse-inner {
+    min-height: 0;
+  }
 }
 .aside {
   width: 235px;
+  flex-shrink: 0; // 防止主内容区main挤压侧边栏aside
   height: 100%;
   background-color: rgba(255, 255, 255, 0.03);
   padding: 10px 0;
@@ -306,8 +308,9 @@ const openDialog = () => {
   }
   .play-container {
     overflow-y: auto;
+    scrollbar-gutter: stable; /* 核心：预留滚动条坑位 要不然会挤压里面的内容*/
     height: calc(100% - 70px);
-    padding: 0 20px;
+    padding: 0 14px 0 20px; // 上0 右14 下0 左20（下padding后面单独覆盖了）
     padding-bottom: 100px;
     .collapsed-lump {
       .title {

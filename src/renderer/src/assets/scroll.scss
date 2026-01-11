@@ -8,15 +8,10 @@
 *::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.08); // 滑块颜色（半透明白色）
   border-radius: 10px; // 滑块圆角
-  visibility: visible;
+  visibility: hidden; // 默认隐藏，只有 hover 容器时才显示
 }
 
-// 鼠标悬停时显示滑块
+// 鼠标悬停在容器上时，显示该容器内的滚动条
 *:hover::-webkit-scrollbar-thumb {
   visibility: visible;
-}
-
-// 默认隐藏滑块（通常配合 hover 使用实现自动隐藏效果）
-*::-webkit-scrollbar-thumb {
-  visibility: hidden;
 }

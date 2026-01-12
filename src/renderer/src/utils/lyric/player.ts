@@ -246,7 +246,7 @@ export class LyricPlayer {
       //使用 GSAP 动画库进行平滑滚动
       gsap.to(this.container, {
         scrollTop: targetScroll,
-        duration: 0.6, //滚动动作耗时 0.6 秒完成
+        duration: 0.4, //滚动动作耗时 0.4 秒完成
         ease: 'power2.out' // 让滚动有一种“快启动、慢刹车”的自然惯性
       })
     }

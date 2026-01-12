@@ -54,7 +54,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: all 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition: all 0.4s cubic-bezier(0.33, 0, 0.67, 1); // ≈ GSAP 的 power2.out
   // 性能优化：提示浏览器提前优化渲染层
   will-change: transform, filter;
   cursor: pointer;
@@ -79,7 +79,7 @@
     color: rgba(255, 255, 255, 0.25);
     //margin-top: -3px; 调整翻译行与原文行的间距
     line-height: 1.5;
-    transition: all 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
+    transition: all 0.4s cubic-bezier(0.33, 0, 0.67, 1);
     letter-spacing: 0.8px;
   }
 

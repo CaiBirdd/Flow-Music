@@ -27,12 +27,12 @@ export const asideFontSize = 14
 // 用于判断当前路由是否需要激活某个菜单项的高亮状态。
 export const needUseComparisonPaths = ['/home', '/lately', '/cloud']
 // 初始状态的侧边栏配置
-// 这是一个数组，每一个对象代表一个“区块”。 store会加载这个初始配置，但在运行时会向里面填充动态数据
+// 这是一个对象数组，每一个对象代表一个“区块”。 store会加载这个初始配置，但在运行时会向里面填充动态数据
 export const originAsideMenuConfig: MenuConfig[] = [
   {
     title: false,
     mark: false,
-    show: true,
+    show: true, //这边改不了，默认和修改后一直在，始终显示
     list: [
       {
         name: '为我推荐',

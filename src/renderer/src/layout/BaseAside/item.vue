@@ -4,7 +4,7 @@ interface Props {
   item: any
   checked: boolean
 }
-const props = defineProps<Props>()
+defineProps<Props>()
 const emit = defineEmits(['click'])
 </script>
 

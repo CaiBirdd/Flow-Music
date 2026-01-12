@@ -2,7 +2,6 @@
 import SongList from '@/components/SongList/index.vue'
 import { useFlags } from '@/store/flags'
 import { columns } from '@/components/PlayListDrawer/config'
-import { playListState } from '@/layout/BaseAside/usePlayList'
 import { useMusicAction } from '@/store/music'
 
 const flags = useFlags()
@@ -19,7 +18,7 @@ const music = useMusicAction()
     </div>
     <SongList
       :columns="columns as any"
-      :loading="playListState.loading"
+      :loading="false"
       :current-song="music.state.currentSong as any"
       :ids="music.state.playQueueIds"
       :list="music.state.playQueue?.tracks || []"

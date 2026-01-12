@@ -2,23 +2,22 @@
 // “红心喜欢/取消喜欢” 和 “从歌单中删除歌曲”
 import { likeMusicApi } from '@/api/musicList'
 import { ElMessage } from 'element-plus'
-import usePlayList from '@/layout/BaseAside/usePlayList'
 import { useMusicAction } from '@/store/music'
 import { updatePlaylistTracks } from '@/api/playlist'
 import { getUserPlayListFn } from '@/utils/userInfo'
+import { useUserInfo } from '@/store'
 
 export default () => {
   const music = useMusicAction()
   const likeMusic = async (id: number, isLike: boolean = true) => {
     try {
-      const data = await likeMusicApi(id, isLike)
+      await likeMusicApi(id, isLike)
       const msg = isLike ? '添加喜欢成功' : '取消喜欢成功'
-      const { getPlayListDetailFn } = usePlayList()
-      // 获取当前正看着/听着的这个歌单ID
-      const playId = music.state.viewingPlaylist?.id
-      if (playId) {
-        getPlayListDetailFn(playId) //当喜欢/删除一首歌后，需要刷新歌单列表，让界面同步更新。
-      }
+
+      // 刷新红心列表
+      const store = useUserInfo()
+      store.refreshLikedSongs()
+
       ElMessage.success(msg)
     } catch (e: any) {
       console.log('e', e.message || e)
@@ -38,9 +37,13 @@ export default () => {
       ElMessage.error(message)
       return
     }
-    const { getPlayListDetailFn } = usePlayList()
-    await getPlayListDetailFn(playId) //刷新歌单中的歌曲
-    getUserPlayListFn() //获取用户左侧的歌单列表，用于删除操作后的全局刷新。
+    // 乐观更新：直接从当前视图中移除该歌曲，无需重新加载
+    if (music.state.viewingPlaylist?.id === playId && music.state.viewingPlaylist.tracks) {
+      const newTracks = music.state.viewingPlaylist.tracks.filter((track) => track.id !== id)
+      music.updateViewingPlaylist({ ...music.state.viewingPlaylist, tracks: newTracks })
+    }
+
+    getUserPlayListFn() //获取用户左侧的歌单列表，用于删除操作后的全局刷新，如果删的是歌单第一首会改变封面图。
     ElMessage.success('删除成功')
   }
   // 目标歌曲 (Target Song)

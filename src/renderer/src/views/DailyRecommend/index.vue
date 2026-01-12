@@ -1,17 +1,21 @@
 ﻿<!-- 每日推荐歌单 和其他歌单作区分 -->
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
+import { ref } from 'vue'
 import { useMusicAction } from '@/store/music'
-import usePlayList, { playListState } from '@/layout/BaseAside/usePlayList'
 import { varDayim } from '@/utils'
 import BaseButton from '@/components/BaseButton/index.vue'
 import SongInfo from '@/components/SongInfo/index.vue'
 import SongList from '@/components/SongList/index.vue'
 import { columns } from '@/views/PlayList/config'
+import { recommendSong } from '@/api/home'
+import { playListMock } from '@/views/DailyRecommend/dailyRecommendSongsConfig'
+import { useUserInfo } from '@/store'
 
-const { getPlayListDetailFn, getRecommendSongs } = usePlayList()
 const route = useRoute()
 const music = useMusicAction()
+const store = useUserInfo()
+const loading = ref(false)
 
 const init = () => {
   const { id } = route.query as { id: number | 'recommendSongs' | null }
@@ -19,8 +23,18 @@ const init = () => {
   if (id === 'recommendSongs') {
     getRecommendSongs()
   } else {
-    id && getPlayListDetailFn(+id)
+    // 日推组件如果被路由到普通歌单ID(理论上不会，但保留防御)，这里可以留空或跳转
+    // 目前没有loadPlaylist了，如果真的有这种情况，应该让它跳转到 PlayList 视图。
+    // 假设 DailyRecommend 只处理日推，忽略此分支。
   }
+}
+const getRecommendSongs = async () => {
+  const { data } = await recommendSong()
+  playListMock.tracks = data.dailySongs
+  // 更新 store，并获取红心列表
+  music.updateViewingPlaylist(playListMock)
+  store.refreshLikedSongs()
+  return data
 }
 init()
 </script>
@@ -47,11 +61,11 @@ init()
   </div>
   <SongList
     :columns="columns"
-    :loading="playListState.loading"
+    :loading="loading"
     :current-song="music.state.currentSong"
-    :ids="playListState.ids"
-    :list="playListState.playList"
-    :list-info="playListState.listInfo"
+    :ids="music.state.viewingPlaylist?.tracks?.map((item) => item.id) || []"
+    :list="music.state.viewingPlaylist?.tracks || []"
+    :list-info="music.state.viewingPlaylist"
     @play="music.getMusicUrlHandler"
   />
 </template>

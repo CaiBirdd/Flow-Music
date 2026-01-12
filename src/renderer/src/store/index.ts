@@ -1,12 +1,7 @@
 import { defineStore } from 'pinia'
 import { Profile } from '@/api/user'
-import { PlaylistBase } from '@/api/musicList'
-import {
-  asideFontSize,
-  ListItem,
-  MenuConfig,
-  originAsideMenuConfig
-} from '@/layout/BaseAside/config' //引入侧边栏配置相关的类型和初始数据
+import { PlaylistBase, getLikeMusicListIds } from '@/api/musicList'
+import { asideFontSize, MenuConfig, originAsideMenuConfig } from '@/layout/BaseAside/config' //引入侧边栏配置相关的类型和初始数据
 import { useAnonimousLogin } from '@/utils/useLogin' //引入匿名登录工具函数（当用户信息失效时自动走游客登录）
 import { useMusicAction } from './music' //引入音乐播放器的 Store，在恢复缓存时需要顺便把播放器状态也恢复了
 import { useFlags } from './flags'
@@ -39,10 +34,7 @@ export const useUserInfo = defineStore('userInfoId', {
       // 1. 深拷贝初始配置，确保不污染原始数据
       const menuConfig: MenuConfig[] = JSON.parse(JSON.stringify(originAsideMenuConfig))
 
-      const myList: ListItem[] = []
-      const subscribedList: ListItem[] = []
-
-      // 2. 找到 'my' (我的) // 'play' (创建的) // 'subscribedList' (收藏的) 三个区块
+      // 2. 找到 'my' (我的) // 'play' (创建的) // 'subscribedList' (收藏的) 三个区块的指针
       const myBlock = menuConfig.find((item) => item.mark === 'my')!
       const createdBlock = menuConfig.find((item) => item.mark === 'play')!
       const subscribedBlock = menuConfig.find((item) => item.mark === 'subscribedList')!
@@ -65,7 +57,7 @@ export const useUserInfo = defineStore('userInfoId', {
       state.userPlayListInfo.forEach((item) => {
         if (item.subscribed) {
           // 收藏的歌单
-          subscribedList.push({ ...item, asideFontSize, icon: '', path: '/play-list' })
+          subscribedBlock.list.push({ ...item, asideFontSize, icon: '', path: '/play-list' })
         } else {
           // 自建的歌单
           if (item.specialType === 5) {
@@ -83,7 +75,7 @@ export const useUserInfo = defineStore('userInfoId', {
             }
           } else {
             // 普通自建歌单
-            myList.push({
+            createdBlock.list.push({
               ...item,
               name: item.name,
               icon: '',
@@ -94,12 +86,8 @@ export const useUserInfo = defineStore('userInfoId', {
         }
       })
 
-      // 4. 填充数据并控制显示
-      if (myList.length) createdBlock.list = myList //创建的歌单
-      if (subscribedList.length) subscribedBlock.list = subscribedList //收藏的歌单
-
       // 5. 根据登录状态控制区块显隐
-      // 如果已登录，显示所有区块；未登录则隐藏需要数据的区块
+      // 如果已登录，显示所有区块；未登录则隐藏需要数据的区块 if循环是排除为我推荐 登录后为其他每一项添加show=true
       menuConfig.forEach((item) => {
         if (typeof item.mark !== 'boolean') {
           item.show = state.isLogin
@@ -140,6 +128,18 @@ export const useUserInfo = defineStore('userInfoId', {
     // 更新红心歌曲ID列表
     updateUserLikeIds(ids: number[]) {
       this.userLikeIds = ids
+    },
+    // 异步 Action: 刷新用户红心歌曲列表 (Consolidated Refresh Logic)
+    async refreshLikedSongs() {
+      if (!this.isLogin || !this.profile.userId) return
+      try {
+        const { ids } = await getLikeMusicListIds(this.profile.userId)
+        if (ids?.length) {
+          this.updateUserLikeIds(ids)
+        }
+      } catch (error) {
+        console.error('刷新红心歌曲列表失败:', error)
+      }
     },
     // 切换折叠状态 这里是根据mark来的，去看layout/BaseAside/config
     toggleCollapse(mark: string) {

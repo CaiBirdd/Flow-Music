@@ -34,5 +34,3 @@ export const deletePlaylist = (ids: string[]) =>
  *    在歌单详情页列表里右键“删除歌曲” -> op='del'
  */
 export const updatePlaylistTracks = (data) => request.get('/playlist/tracks', { params: data })
-//检查歌曲可用性 看看有没有版权
-export const checkMusic = (id: number) => request.post('/check/music', { id })

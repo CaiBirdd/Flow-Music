@@ -92,7 +92,6 @@ export type GetMusicDetailData = {
   pop: number //歌曲受欢迎程度
   album: string //专辑名
   artist?: string
-  copyright?: number
   playTime?: number
   [key: string]: any // 允许任意其他字段（兼容后端乱加字段）
 }

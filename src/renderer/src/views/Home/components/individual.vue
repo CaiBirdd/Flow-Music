@@ -1,6 +1,6 @@
 <!-- 在首页显示“歌单/推荐”区域。 -->
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Recommend, recommendSongList } from '@/api/home'
 import { useRouter } from 'vue-router'
 import recommendImage from '@/assets/recommend.png'
@@ -9,33 +9,33 @@ import Card from '@/components/Card/index.vue'
 import SkeletonCard from '@/components/SkeletonCard/index.vue'
 
 const recommendSongs = 'recommendSongs'
-interface State {
-  recommend: Recommend[]
-  loading: boolean
-}
-const state = ref<State>({
-  recommend: [],
-  loading: false
-})
+const list = ref<Recommend[]>([])
+const loading = ref(true)
+
 const router = useRouter()
-async function init() {
-  state.value.loading = true
-  const { recommend } = await recommendSongList()
-  state.value.loading = false
-  state.value.recommend = recommend
-}
-init()
+
+//这里拿到的只是首页推荐的歌单，没有每日推荐歌单，这里相当于强行凑一下
+onMounted(async () => {
+  const res = await recommendSongList()
+  console.log(res, '首页推荐歌单')
+  const { recommend } = res
+  list.value = recommend
+  loading.value = false
+})
 
 const playDetailList = (item: Recommend | typeof recommendSongs) => {
-  // 类型保护
-  const id = (item as Recommend).id || item
-  router.push(`/daily-recommend?id=${id}`)
+  if (item === recommendSongs) {
+    router.push(`/daily-recommend?id=${recommendSongs}`)
+  } else {
+    // 普通歌单跳转通用详情页
+    router.push(`/play-list?id=${(item as Recommend).id}`)
+  }
 }
 </script>
 
 <template>
-  <div v-loading="state.loading" class="container">
-    <SkeletonCard :loading="state.loading">
+  <div v-loading="loading" class="container">
+    <SkeletonCard :loading="loading">
       <AreaBox>
         <template #title>歌单</template>
         <Card
@@ -45,7 +45,7 @@ const playDetailList = (item: Recommend | typeof recommendSongs) => {
           @click="playDetailList(recommendSongs)"
         ></Card>
         <Card
-          v-for="item in state.recommend"
+          v-for="item in list"
           :key="item.id"
           :is-click="true"
           :name="item.name"

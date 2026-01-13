@@ -1,8 +1,8 @@
 ﻿<!-- 功能：渲染歌曲列表页（可搜索、播放、分页、右键菜单、显示专辑/歌手信息等）
  是歌曲列表展示与播放交互的主视图组件。 -->
 <script setup lang="ts">
-import { h, nextTick, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { h, ref, watch } from 'vue' // vue 3.5+
+import { useRouter } from 'vue-router'
 import { lookup } from '@/utils'
 import { GetMusicDetailData, PlaylistBase } from '@/api/musicList'
 import { useUserInfo } from '@/store'
@@ -11,7 +11,6 @@ import { useMusicAction } from '@/store/music'
 import Pagination from '@/components/Pagination/index.vue'
 import NotFound from '@/assets/not-found.png'
 import ContextMenu from '@/components/ContextMenu/index.vue'
-import { checkMusic } from '@/api/playlist'
 
 export interface Columns {
   title: string
@@ -59,17 +58,15 @@ const props = withDefaults(defineProps<Props>(), {
   lazy: true,
   isNeedTitle: true
 })
-const emit = defineEmits(['play', 'current-change', 'update:modelValue'])
+const emit = defineEmits(['play', 'current-change'])
 
 const store = useUserInfo()
 const music = useMusicAction()
 const { likeMusic, deleteSongHandler } = useMusic()
 const router = useRouter()
-const route = useRoute()
 
 const id = ref(0)
 const filterList = ref(props.list)
-const copyrightVisible = ref(false)
 const searchKeyword = ref('')
 
 const formatCount = (index: number) => {
@@ -93,12 +90,6 @@ const handlePlaylistMenuSelect = (item: { label: string; value: string }, row) =
 }
 
 const playHandler = async (item: GetMusicDetailData, index: number) => {
-  const { success } = await checkMusic(item.id)
-  if (success === false) {
-    copyrightVisible.value = true
-    return
-  }
-
   if (music.state.playQueue?.id === music.state.viewingPlaylist?.id) {
     if (window.$audio.isPlay && props.currentSong.id === item.id) {
       return
@@ -139,10 +130,6 @@ const singerDetail = (id: number) => {
   router.push(`/singer-page?id=${id}`)
 }
 
-const closeCopyrightVisible = () => {
-  copyrightVisible.value = false
-}
-
 const handleSearch = (val: string) => {
   searchKeyword.value = val
   if (!val.trim().length) {
@@ -169,76 +156,11 @@ watch(
     }
   }
 )
-/**
- * 存储列表项的DOM引用，用于滚动定位
- * 内存优化: 在列表更新时清理旧引用，避免累积
- */
-const itemRefs = ref<Record<number, HTMLDivElement>>({})
-const setItemRef = (el: any, id: number) => {
-  if (el) {
-    itemRefs.value[id] = el.$el || el
-  } else {
-    // 元素被卸载时删除引用
-    delete itemRefs.value[id]
-  }
-}
-watch(
-  () => props.loading,
-  async (value) => {
-    if (!value && route.query.position && music.state.searchList.length > 0) {
-      const target = music.state.searchList.find((item) =>
-        props.list.find((listItem) => item.id === listItem.id)
-      )
-      console.log('target', target)
-
-      if (target) {
-        nextTick(() => {
-          const targetEl = itemRefs.value[target.id]
-          targetEl.classList.add('position-target')
-          const scrollEl = document.querySelector('.body')
-          if (targetEl && scrollEl) {
-            scrollEl.scrollTo({
-              top: targetEl.getBoundingClientRect().top - scrollEl.clientHeight / 2.35,
-              behavior: 'smooth'
-            })
-            targetEl.style.backgroundColor = 'rgba(255, 255, 255, 0.06)'
-            targetEl
-              .animate(
-                [
-                  { backgroundColor: 'rgba(255, 255, 255, 0.06)' },
-                  { backgroundColor: 'rgba(255, 255, 255, 0)' }
-                ],
-                {
-                  duration: 1300,
-                  easing: 'ease-in-out',
-                  delay: 3000
-                }
-              )
-              .finished.then(() => {
-                targetEl.style.backgroundColor = ''
-              })
-          }
-        })
-      }
-    }
-  },
-  {
-    immediate: true
-  }
-)
 
 watch(
   () => props.list,
   (val) => {
     filterList.value = val
-    // 内存优化: 列表更新时清理不再存在的项的DOM引用
-    const currentIds = new Set(val.map((item) => item.id))
-    Object.keys(itemRefs.value).forEach((key) => {
-      const id = Number(key)
-      if (!currentIds.has(id)) {
-        delete itemRefs.value[id]
-      }
-    })
   }
 )
 </script>
@@ -259,19 +181,6 @@ watch(
         @update:model-value="handleSearch"
       />
     </div>
-
-    <!-- 版权提示对话框 -->
-    <VDialog v-model="copyrightVisible" scrim :max-width="400">
-      <VCard rounded="lg">
-        <VCardTitle class="d-flex justify-space-between align-center">
-          <div class="text-h5 text-medium-emphasis ps-2">当前歌曲暂无音源</div>
-          <VBtn icon="mdi-close" variant="text" @click="closeCopyrightVisible" />
-        </VCardTitle>
-        <VCardText class="d-flex justify-center align-center">
-          <VBtn variant="tonal" @click="closeCopyrightVisible"> 好 </VBtn>
-        </VCardText>
-      </VCard>
-    </VDialog>
 
     <!-- 主要内容 -->
     <template v-if="loading || filterList.length">
@@ -298,7 +207,7 @@ watch(
           @select="(e) => handlePlaylistMenuSelect(e, data)"
         >
           <div
-            :ref="(el) => setItemRef(el, data.id)"
+            ref="items"
             class="list"
             :class="{ 'disable-list': data.copyright === 0 }"
             @dblclick="() => playHandler(data, i)"

@@ -56,7 +56,6 @@ interface Props {
 // -----------------------------------------------------------------------------
 
 const props = defineProps<Props>()
-// const emit = defineEmits(['playEnd']) // 播放结束
 
 // 状态仓库
 const store = useUserInfo() // 用户信息
@@ -373,7 +372,7 @@ defineExpose(exposeObj) // 挂载到 window.$audio 上的就是这个对象
    * 2. 使用will-change提示浏览器预优化
    * 3. 使用transform开启GPU合成层
    */
-  /* 毛玻璃核心：背景模糊40px，饱和度提升180% (让颜色更鲜艳好看) */
+  /* 半透明毛玻璃核心：背景模糊40px，饱和度提升180% (让颜色更鲜艳好看) */
   backdrop-filter: blur(40px) saturate(180%);
   will-change: backdrop-filter;
   transform: translate3d(0, 0, 0);

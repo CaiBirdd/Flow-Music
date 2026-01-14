@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import type { TabsPaneContext } from 'element-plus'
 import { tabsConfig } from './config'
-import List from '@/components/List/index.vue'
 import Individual from './components/individual.vue'
 import SkeletonCard from '@/components/SkeletonCard/index.vue'
 

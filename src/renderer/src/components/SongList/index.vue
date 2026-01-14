@@ -11,9 +11,10 @@ import { useMusicAction } from '@/store/music'
 import Pagination from '@/components/Pagination/index.vue'
 import NotFound from '@/assets/not-found.png'
 import ContextMenu from '@/components/ContextMenu/index.vue'
-
+//定义列配置接口：这决定了列表每一列怎么渲染
+// 这是一个高度可配置的列表组件，每一列显示什么内容（文本、图片、组件）都由外部传入的 columns 决定
 export interface Columns {
-  title: string
+  title: string //列标题
   hidden?: boolean
   picUrl?: string
   icon?: string[]
@@ -21,33 +22,33 @@ export interface Columns {
   on?: object
   style?: object
   width?: string
-  type?: 'index' | 'handle' | 'title' | 'album'
+  type?: 'index' | 'handle' | 'title' | 'album' //特殊渲染类型
   class?: string
-  processEl?: (createVNode: typeof h, arg: any, index: number) => any
-  lazy?: boolean
+  processEl?: (createVNode: typeof h, arg: any, index: number) => any //自定义渲染函数
 }
-
+//右键菜单项
 const playlistMenuItems = [
   { label: '评论', value: 'comment' },
   { label: '删除歌曲', value: 'delete' }
 ]
+//组件props定义
 interface Props {
-  list: GetMusicDetailData[]
-  currentSong: GetMusicDetailData
-  columns: Columns[]
+  list: GetMusicDetailData[] // 完整的歌曲数据列表
+  currentSong: GetMusicDetailData // 当前正在播放的歌曲（用于高亮显示）
+  columns: Columns[] // 列配置数组
   loading?: boolean
   ids?: number[]
-  listInfo?: PlaylistBase | any
+  listInfo?: PlaylistBase | any // 当前歌单的信息
   scroll?: boolean
-  isPaging?: boolean
+  isPaging?: boolean // 是否显示分页器（默认为 true）
   total?: number
   pageSize?: number
   currentPage?: number
   isLoadingEndflyback?: boolean
-  lazy?: boolean
   isNeedTitle?: boolean
-  isSearch?: boolean
+  isSearch?: boolean // 是否显示搜索框（默认为 true）
 }
+//Props 默认值设置
 const props = withDefaults(defineProps<Props>(), {
   listInfo: {},
   isSearch: true,
@@ -58,6 +59,7 @@ const props = withDefaults(defineProps<Props>(), {
   lazy: true,
   isNeedTitle: true
 })
+// 定义发出的事件：播放、翻页
 const emit = defineEmits(['play', 'current-change'])
 
 const store = useUserInfo()
@@ -65,14 +67,17 @@ const music = useMusicAction()
 const { likeMusic, deleteSongHandler } = useMusic()
 const router = useRouter()
 
+//当前传入歌曲的id
 const id = ref(0)
-const filterList = ref(props.list)
-const searchKeyword = ref('')
+const filterList = ref(props.list) // 过滤后的列表（用于搜索结果展示）
+const searchKeyword = ref('') // 搜索关键词
 
+// 格式化序号：小于10补0（如 1 -> 01）
 const formatCount = (index: number) => {
   return index.toString().length > 1 ? index : '0' + index
 }
 
+// 处理右键菜单点击事件
 const handlePlaylistMenuSelect = (item: { label: string; value: string }, row) => {
   switch (item.value) {
     case 'delete':
@@ -89,34 +94,41 @@ const handlePlaylistMenuSelect = (item: { label: string; value: string }, row) =
   }
 }
 
+//双击播放处理逻辑
 const playHandler = async (item: GetMusicDetailData, index: number) => {
+  // 判断逻辑：如果当前点击的歌单就是正在播放的歌单
   if (music.state.playQueue?.id === music.state.viewingPlaylist?.id) {
+    // 且点击的是正在播放的同一首歌 -> 啥也不做
     if (window.$audio.isPlay && props.currentSong.id === item.id) {
       return
     }
+    //如果是同一首歌但处在暂停状态 -> 恢复播放
     if (!window.$audio.isPlay && props.currentSong.id === item.id) {
       return window.$audio.play()
     }
   }
 
   id.value = item.id
-  emit('play', item, index)
+  emit('play', item, index) // 通知父组件进行播放
 
-  // 如果传入了listInfo和ids，总是更新playQueue，确保当前播放列表上下文正确
+  // 更新播放队列
+  // 确保不管用户在哪个歌单点了歌，播放器的队列都会切换到这个当前歌单
   if (props.ids && props.listInfo) {
-    music.updatePlayQueue({ tracks: props.list, ...props.listInfo }, props.ids)
+    music.updatePlayQueue({ ...props.listInfo, tracks: props.list }, props.ids)
   }
 }
-
+/// 鼠标按下事件（简单记录一下当前选中的歌曲 ID）
 const mousedownHandler = (item: GetMusicDetailData) => {
   id.value = item.id
 }
-
+// 判断歌曲是否已喜欢（红心状态）
 const isLike = (item: GetMusicDetailData) => {
   return store.userLikeIds.includes(item.id)
 }
-
+// 判断当前行是否应该高亮（变成红色字体）
 const activeText = (item: GetMusicDetailData) => {
+  // 逻辑：必须是当前正在播放的那首歌 (item.id === currentSong.id)
+  // 并且当前歌单必须是正在播放的歌单
   if (item.id === undefined) {
     return false
   } else if (props.listInfo) {
@@ -125,16 +137,17 @@ const activeText = (item: GetMusicDetailData) => {
     return item.id === props.currentSong.id
   }
 }
-
+// 跳转歌手详情页
 const singerDetail = (id: number) => {
   router.push(`/singer-page?id=${id}`)
 }
-
+//前端搜索逻辑
 const handleSearch = (val: string) => {
   searchKeyword.value = val
   if (!val.trim().length) {
-    filterList.value = props.list
+    filterList.value = props.list // 空关键词 -> 显示全量列表
   } else {
+    // 关键词过滤：搜歌名、专辑名、歌手名
     filterList.value = props.list.filter((item) => {
       const alName = item.al?.name || ' '
       const keywords = [item.name?.toLowerCase(), alName.toLowerCase()]
@@ -147,7 +160,7 @@ const handleSearch = (val: string) => {
     })
   }
 }
-
+// 监听 Loading 状态：加载完成后如果需要，让列表滚回顶部
 watch(
   () => props.loading,
   (val) => {
@@ -156,7 +169,7 @@ watch(
     }
   }
 )
-
+//监听 props.list 变化：源数据变了，同步更新本地的 filterList
 watch(
   () => props.list,
   (val) => {
@@ -166,8 +179,9 @@ watch(
 </script>
 
 <template>
+  <!-- 滚动容器 先渲染行再渲染列-->
   <div class="song-list-container" :style="{ overflowY: scroll ? 'auto' : 'visible' }">
-    <!-- 搜索框 -->
+    <!-- 搜索框 Vuetify 组件-->
     <div v-if="isSearch" class="search-container" :style="{ display: loading ? 'none' : '' }">
       <VTextField
         v-model="searchKeyword"
@@ -182,9 +196,9 @@ watch(
       />
     </div>
 
-    <!-- 主要内容 -->
+    <!-- 如果有数据或正在加载，显示列表 -->
     <template v-if="loading || filterList.length">
-      <!-- 标题行 -->
+      <!-- 表头行：循环渲染 columns 定义的列名 -->
       <div v-if="isNeedTitle" class="title-container" :style="{ display: loading ? 'none' : '' }">
         <div
           v-for="config in columns"
@@ -198,7 +212,7 @@ watch(
         </div>
       </div>
 
-      <!-- 歌曲列表 -->
+      <!-- 歌曲列表内容区域 -->
       <div class="list-container" :style="{ display: loading ? 'none' : '' }">
         <ContextMenu
           v-for="(data, i) in filterList"
@@ -208,8 +222,7 @@ watch(
         >
           <div
             ref="items"
-            class="list"
-            :class="{ 'disable-list': data.copyright === 0 }"
+            class="song-row"
             @dblclick="() => playHandler(data, i)"
             @mousedown="() => mousedownHandler(data)"
           >
@@ -217,16 +230,16 @@ watch(
               v-for="config in columns"
               v-show="!config.hidden"
               :key="config.prop || config.type"
-              class="item"
+              class="song-col"
               :class="config.class"
               :style="{ ...config.style, width: config.width }"
             >
+              <!-- 自定义渲染函数 -->
               <template v-if="config.processEl">
-                <!-- 自定义处理元素 -->
                 <component :is="h('div', config.processEl(h, data, i))" />
               </template>
+              <!-- 图标列处理 -->
               <template v-else-if="config.icon">
-                <!-- 图标处理 -->
                 <i
                   v-for="val in config.icon"
                   :key="val"
@@ -238,28 +251,31 @@ watch(
                   @click="val === 'love' && likeMusic(data.id, !isLike(data))"
                 />
               </template>
+              <!-- 普通文本属性列 比如时长-->
               <template v-else-if="!config.type && config.prop">
-                <!-- 普通属性 -->
                 {{ lookup(data, config.prop) }}
               </template>
+              <!--序号列处理 -->
               <template v-else-if="config.type === 'index'">
-                <!-- 索引 -->
                 {{ formatCount(isPaging ? pageSize * (currentPage - 1) + (i + 1) : i + 1) }}
               </template>
+              <!-- 歌曲标题列 -->
               <template v-else-if="config.type === 'title'">
-                <!-- 歌曲标题 -->
-                <div class="title-box">
+                <div class="info-cell">
+                  <!-- 封面 -->
                   <VImg
                     style="max-width: 50px"
                     width="50"
                     aspect-ratio="1/1"
                     :src="lookup(data, config.picUrl) + '?param=150y150'"
-                    class="pic-url"
+                    class="cover-img"
                   />
+                  <!-- 歌名 -->
                   <div class="name-box">
                     <div :style="{ color: activeText(data) ? 'rgb(255,60,60)' : '' }">
                       {{ lookup(data, config.prop) }}
                     </div>
+                    <!-- 歌手 -->
                     <div class="name-container">
                       <template v-if="!data.ar">
                         {{ data.artist }}
@@ -282,8 +298,8 @@ watch(
                   </div>
                 </div>
               </template>
+              <!-- 专辑列 -->
               <template v-else-if="config.type === 'album'">
-                <!-- 专辑 -->
                 {{ lookup(data, config.prop) || '未知专辑' }}
               </template>
             </div>
@@ -292,13 +308,13 @@ watch(
       </div>
     </template>
 
-    <!-- 空状态 -->
+    <!-- 空状态展示 -->
     <div v-else style="display: grid; place-items: center; gap: 20px">
       <div style="font-size: 20px">没有找到关于"{{ searchKeyword }}"的任何内容</div>
       <VImg :src="NotFound" width="150" />
     </div>
 
-    <!-- 分页 -->
+    <!-- 分页器 -->
     <Pagination
       v-if="isPaging && total"
       background
@@ -308,14 +324,12 @@ watch(
       @current-change="(page) => $emit('current-change', page)"
     />
 
-    <!-- 加载状态 -->
+    <!-- 加载状态遮罩 -->
     <div v-loading="loading" class="loading" :style="{ display: loading ? 'block' : 'none' }" />
   </div>
 </template>
 
 <style lang="scss" scoped>
-.position-target {
-}
 /* 保留原有的样式不变 */
 .song-list-container {
   flex: 1;
@@ -328,10 +342,6 @@ watch(
   .loading {
     position: relative;
     top: 100px;
-    :deep(.el-loading-mask) {
-      .el-loading-spinner {
-      }
-    }
   }
   .title-item.empty {
     position: relative;
@@ -374,10 +384,7 @@ watch(
       color: $darkText;
     }
   }
-  .list.disable-list {
-    //background-color: rgba(0, 0, 0, 0.3);
-  }
-  .list {
+  .song-row {
     gap: 10px;
     font-size: 14px;
     display: flex;
@@ -386,9 +393,9 @@ watch(
     align-items: center;
     padding: 0 20px;
     border-radius: 10px;
-    .title-box {
+    .info-cell {
       display: flex;
-      .pic-url {
+      .cover-img {
         height: 50px;
         width: 50px;
         border-radius: 8px;
@@ -422,7 +429,7 @@ watch(
         color: $text !important;
       }
     }
-    .item {
+    .song-col {
       text-align: left;
       flex-shrink: 0;
     }

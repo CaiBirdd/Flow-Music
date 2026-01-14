@@ -18,8 +18,7 @@ export const columns: Columns[] = [
     picUrl: 'al.picUrl',
     width: '75%',
     class: 'title',
-    type: 'title',
-    lazy: true
+    type: 'title'
   },
   {
     title: '操作',

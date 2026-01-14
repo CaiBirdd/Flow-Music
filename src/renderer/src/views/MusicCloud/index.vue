@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { useMusicAction } from '@/store/music'
-import {
-  getUserCloud,
-  GetMusicDetailData,
-  GetUserCloudRes,
-  GetUserCloudSong,
-  PlaylistBase
-} from '@/api/musicList'
+import { getUserCloud, GetMusicDetailData, PlaylistBase } from '@/api/musicList'
 import { columns } from './config'
 import SongList from '@/components/SongList/index.vue'
 import { ref } from 'vue'

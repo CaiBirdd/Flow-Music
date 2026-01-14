@@ -9,6 +9,11 @@ export default [
     component: () => import('@/views/PlayList/index.vue')
   },
   {
+    path: '/album-list',
+    name: 'albumList',
+    component: () => import('@/views/AlbumList/index.vue')
+  },
+  {
     path: '/search',
     name: 'search',
     component: () => import('@/views/SearchList/index.vue')

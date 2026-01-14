@@ -71,10 +71,9 @@ const getAlbumContentHandler = async (id: number) => {
   // const data = await getAlbumContent(id)
   // console.log(data)
   router.push({
-    path: '/play-list',
+    path: '/album-list',
     query: {
-      id,
-      type: 'album'
+      id
     }
   })
 }

@@ -30,9 +30,5 @@ export const searchHotDetail = () => request.post('/search/hot/detail')
 export const searchSuggest = (keywords: string, type: 'mobile' | '' = '') =>
   request.post('/search/suggest', { keywords, type })
 
-// 搜索多重匹配
-export const searchMultimatch = (keywords: string) =>
-  request.post('/search/multimatch', { keywords })
-
 // 默认搜索关键词
 export const searchDefault = () => request.post<SearchDefaultRes>('/search/default')

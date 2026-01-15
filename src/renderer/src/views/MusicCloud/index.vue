@@ -1,52 +1,54 @@
 <script setup lang="ts">
 import { useMusicAction } from '@/store/music'
-import { getUserCloud, GetMusicDetailData, PlaylistBase } from '@/api/musicList'
+import { getUserCloud, GetMusicDetailData } from '@/api/musicList'
 import { columns } from './config'
 import SongList from '@/components/SongList/index.vue'
 import { ref } from 'vue'
 
 const music = useMusicAction()
-// GetUserCloudRes['data']
-interface State {
+interface CloudData {
   loading: boolean
-  ids: number[]
-  list: GetMusicDetailData[]
-  listInfo: PlaylistBase | object
-  total: number
-  page: number
-  limit: number
+  ids: number[] // 当前页所有歌曲的 ID 集合
+  list: GetMusicDetailData[] // 当前页的歌曲列表数据
+  total: number // 总歌曲数 (用于分页计算)
+  page: number // 当前页码
+  limit: number // 每页显示条数 (默认 100)
 }
-const state = ref<State>({
+const cloudData = ref<CloudData>({
   loading: true,
   ids: [],
   list: [],
-  listInfo: {},
   total: 0,
   page: 1,
   limit: 100
 })
 
-getUserCloudFn()
+// 组件加载时，默认请求第一页数据
+getCloudSongs()
 
-async function getUserCloudFn() {
-  state.value.loading = true
-  const { data, count } = await getUserCloud(
-    state.value.limit,
-    (state.value.page - 1) * state.value.limit
-  ).finally(() => {
-    state.value.loading = false
-  })
-  state.value.total = count
-  state.value.list = data.map((item) => {
-    state.value.ids.push(item.simpleSong.id)
-    return item.simpleSong
-  })
-  music.updateViewingPlaylist({ id: 'cloud-songs', tracks: state.value.list })
+async function getCloudSongs() {
+  cloudData.value.loading = true
+  try {
+    const { data, count } = await getUserCloud(
+      cloudData.value.limit,
+      (cloudData.value.page - 1) * cloudData.value.limit
+    )
+    cloudData.value.total = count // 更新总数
+
+    // 提取歌曲列表
+    // item结构: { simpleSong: { name: '...', id: 123, ... }, ... }
+    const songs = data.map((item) => item.simpleSong)
+    cloudData.value.list = songs
+    // 重新生成 ids，修复无限堆积 bug
+    cloudData.value.ids = songs.map((item) => item.id)
+  } finally {
+    cloudData.value.loading = false
+  }
 }
-
-const currentChange = (val: number) => {
-  state.value.page = val
-  getUserCloudFn()
+// 分页切换时的回调
+const handlePageChange = (val: number) => {
+  cloudData.value.page = val
+  getCloudSongs() // 重新请求数据
 }
 </script>
 
@@ -56,16 +58,17 @@ const currentChange = (val: number) => {
     is-paging
     :current-song="music.state.currentSong"
     :columns="columns"
-    :loading="state.loading"
-    :ids="state.ids"
-    :list="state.list"
-    :list-info="state.listInfo"
-    :page-size="state.limit"
-    :total="state.total"
-    :current-page="state.page"
+    :loading="cloudData.loading"
+    :ids="cloudData.ids"
+    :list="cloudData.list"
+    :list-info="{}"
+    :page-size="cloudData.limit"
+    :total="cloudData.total"
+    :current-page="cloudData.page"
     @play="music.getMusicUrlHandler"
-    @current-change="currentChange"
+    @current-change="handlePageChange"
   ></SongList>
+  <!-- :list-info="{}" 歌单头部信息，云盘不需要，传个空对象 -->
 </template>
 
 <style scoped></style>

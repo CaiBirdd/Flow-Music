@@ -8,50 +8,48 @@ import { useUserInfo } from '@/store'
 
 const settings = useSettings()
 const store = useUserInfo()
-const snackbar = ref(false)
+// 用来控制 "确认" 按钮是否可用，以及显示错误信息
 const urlVerify = ref({
   message: '',
   isValid: true
 })
-let form = ref({
+//表单数据 初始值从store中获取
+const settingForm = ref({
   url: settings.state.baseUrl,
   font: settings.state.font
 })
-const validateUrl = (value: string) => {
-  let result = {
-    message: '',
-    isValid: true
-  }
-  if (value === '') {
-    result = {
+//验证url是否有效
+const validateUrl = (value: any) => {
+  if (!value) {
+    urlVerify.value = {
       message: '地址不能为空',
       isValid: false
     }
-    result.message = '地址不能为空'
-    result.isValid = false
+    return '地址不能为空'
   }
-  result = checkUrlValidity(value)
+  //调用工具函数验证url是否有效
+  const result = checkUrlValidity(value)
   urlVerify.value = result
 
   return result.isValid || result.message
 }
-
+//设置base url
 const setBaseUrl = () => {
-  snackbar.value = true
   settings.setState({
-    baseUrl: form.value.url
+    baseUrl: settingForm.value.url
   })
   ElMessage.success({
     message: '修改网络域成功'
   })
 }
-const test = () => {}
-const updateBg = (value) => {
+// 切换歌词页背景模式 rhythm: 模糊动态背景 rgb: 纯色渐变背景
+const updateBg = (value: any) => {
   settings.setState({
     lyricBg: value
   })
 }
-const updateBold = (value) => {
+// 切换全局粗体
+const updateBold = (value: any) => {
   settings.setState({
     bold: value
   })
@@ -61,32 +59,35 @@ const updateBold = (value) => {
     document.body.classList.remove('bold')
   }
 }
+// 设置全局字体
 const setFont = () => {
   settings.setState({
-    font: form.value.font
+    font: settingForm.value.font
   })
   const appEl = document.querySelector('#app') as HTMLDivElement
   if (appEl) {
-    appEl.style.fontFamily = form.value.font
+    appEl.style.fontFamily = settingForm.value.font
     ElMessage.success({
       message: '字体设置成功'
     })
   }
 }
-
+// 恢复出厂设置
+// 调用 Pinia store 的 $reset 方法，重置所有状态为默认值
 const recoverDefaultSettings = () => {
   settings.$reset()
 }
-
+//退出登录
 const quitLogin = () => {
-  localStorage.clear()
-  location.reload()
+  localStorage.clear() //清空所有缓存
+  location.reload() //页面刷新，回到未登录态
 }
 </script>
 
 <template>
   <div class="padding-container">
     <div>
+      <!-- 歌词背景模式 -->
       <v-btn-toggle
         v-model="settings.state.lyricBg"
         density="compact"
@@ -95,6 +96,7 @@ const quitLogin = () => {
         <v-btn class="small" size="default" value="rhythm">模糊背景</v-btn>
         <v-btn size="default" value="rgb">纯色模式</v-btn>
       </v-btn-toggle>
+      <!-- 问号提示图标 -->
       <v-tooltip>
         <template #activator="{ props }">
           <v-btn
@@ -106,15 +108,17 @@ const quitLogin = () => {
           >
           </v-btn>
         </template>
+        <!-- Tooltip 内容 -->
         <div>
-          <h3>设置歌词页背</h3>
+          <h3>设置歌词页背景</h3>
           <p>模糊背景：通过图片拼接的方式在四角旋转来呈现动态背景方式</p>
           <p>纯色模式：通过取图片的两种主色调来呈现的背景颜色，对于网络环境和电脑性能支持更好</p>
         </div>
       </v-tooltip>
     </div>
+    <!-- 设置base url rules绑定校验函数-->
     <v-text-field
-      v-model="form.url"
+      v-model="settingForm.url"
       width="600"
       density="compact"
       :persistent-clear="!urlVerify.isValid"
@@ -126,6 +130,7 @@ const quitLogin = () => {
       :rules="[validateUrl]"
       :placeholder="settings.state.baseUrl"
     >
+      <!-- 内部后置插槽：放置“确认”按钮 -->
       <template #append-inner>
         <v-btn
           :disabled="!urlVerify.isValid"
@@ -134,6 +139,7 @@ const quitLogin = () => {
           >确认</v-btn
         >
       </template>
+      <!-- 外部后置插槽：放置问号提示 -->
       <template #append>
         <v-tooltip>
           <template #activator="{ props }">
@@ -147,8 +153,9 @@ const quitLogin = () => {
         </v-tooltip>
       </template>
     </v-text-field>
+    <!-- 全局字体 -->
     <v-text-field
-      v-model="form.font"
+      v-model="settingForm.font"
       width="600"
       density="compact"
       clearable
@@ -175,20 +182,20 @@ const quitLogin = () => {
         </v-tooltip>
       </template>
     </v-text-field>
+    <!-- 全局加粗开关 -->
     <v-switch
       v-model="settings.state.bold"
       label="全局字体加粗"
       @update:model-value="updateBold"
     ></v-switch>
+
     <v-btn style="width: 110px" base-color="rgba(255,255,255,0.1)" @click="recoverDefaultSettings"
       >恢复默认设置</v-btn
     >
     <v-btn v-if="store.isLogin" style="width: 110px; margin-top: 20px" @click="quitLogin"
       >退出登录</v-btn
     >
-    <!--    <v-snackbar color="rgba(76, 175, 80, 0.8)" location="top" v-model="snackbar">-->
-    <!--      <div style="color: white">修改成功</div>-->
-    <!--    </v-snackbar>-->
+    <!-- 版本号组件 -->
     <Versions v-if="isElectron()"></Versions>
   </div>
 </template>

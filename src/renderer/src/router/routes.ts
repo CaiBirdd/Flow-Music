@@ -24,26 +24,6 @@ export default [
     component: () => import('@/views/Home/index.vue')
   },
   {
-    path: '/fm',
-    name: 'fm',
-    component: () => import('@/views/PrivateFm/index.vue')
-  },
-  {
-    path: '/video',
-    name: 'video',
-    component: () => import('@/views/Video/index.vue')
-  },
-  {
-    path: '/follow',
-    name: 'follow',
-    component: () => import('@/views/Follow/index.vue')
-  },
-  {
-    path: '/local',
-    name: 'local',
-    component: () => import('@/views/Local/index.vue')
-  },
-  {
     path: '/lately',
     name: 'lately',
     component: () => import('@/views/LatelyPlay/index.vue')
@@ -79,8 +59,8 @@ export default [
     component: () => import('@/views/Setting/index.vue')
   },
   {
-    path: '/user-cover',
-    name: 'userCover',
-    component: () => import('@/views/UserCover/index.vue')
+    path: '/user-record',
+    name: 'userRecord',
+    component: () => import('@/views/UserRecord/index.vue')
   }
 ]

@@ -1,84 +1,87 @@
 ﻿<script setup lang="ts" name="SearchList">
 import SongList from '@/components/SongList/index.vue'
 import { useMusicAction } from '@/store/music'
-import { columns, tabsConfig } from './config'
+import { columns } from './config'
 import { useRoute, useRouter } from 'vue-router'
 import { cloudSearch } from '@/api/search'
 import { ref, watch } from 'vue'
-import { GetMusicDetailData } from '@/api/musicList'
+import { GetMusicDetailData, PlaylistBase } from '@/api/musicList' // Assuming PlaylistBase is exported here
 import AreaBox from '@/components/AreaBox/index.vue'
 import Card from '@/components/Card/index.vue'
 
-interface State {
+// 更加语义化的状态结构
+interface SearchResult {
   songs: {
-    result: GetMusicDetailData[]
-    songCount: number
+    list: GetMusicDetailData[]
+    total: number
   }
-  songList: {
-    playlists: any[]
-    playlistCount: number
+  playlists: {
+    list: PlaylistBase[]
+    total: number
   }
 }
 const music = useMusicAction()
 const route = useRoute()
 const router = useRouter()
-const limit = ref(50)
-const page = ref(1)
-const loading = ref(false)
-const state = ref<State>({
+const limit = ref(50) //分页大小
+const page = ref(1) //当前页码
+const loading = ref(false) //加载状态
+const searchResult = ref<SearchResult>({
   songs: {
-    result: [],
-    songCount: 0
+    list: [],
+    total: 0
   },
-  songList: {
-    playlists: [],
-    playlistCount: 0
+  playlists: {
+    list: [],
+    total: 0
   }
 })
-const activeName = ref<string>(tabsConfig[0].name)
-
+//页面加载或参数变化时调用
 function init() {
   const { key } = route.query as { key: string }
-  search(key, (page.value - 1) * limit.value, limit.value)
-  getKeySongList(key, 0, 20)
+  getSongs(key, (page.value - 1) * limit.value, limit.value)
+  getPlaylists(key, 0, 20)
 }
-const search = async (key: string, offset: number, limit: number) => {
+//获取歌曲列表 offset是开始取值的起始位置，limit是取值的数量
+const getSongs = async (key: string, offset: number, limit: number) => {
   loading.value = true
   const { result } = await cloudSearch(key, offset, limit).finally(() => {
     loading.value = false
   })
-  state.value.songs.songCount = result.songCount
-  state.value.songs.result = result.songs
+  searchResult.value.songs.list = result.songs
+  searchResult.value.songs.total = result.songCount
+  //更新store
   music.updateSearchList(result.songs)
 }
+//获取相关歌单
+const getPlaylists = async (key: string, offset: number, limit: number) => {
+  //type=1000是获取歌单
+  const { result } = await cloudSearch(key, offset, limit, 1000)
+  if (result) {
+    searchResult.value.playlists.list = (result as any).playlists
+    searchResult.value.playlists.total = (result as any).playlistCount
+  }
+}
 
+//分页变化时的回调
 const currentChange = (val: number) => {
   page.value = val
   init()
 }
-
-const getKeySongList = async (key: string, offset: number, limit: number) => {
-  const { result } = await cloudSearch(key, offset, limit, 1000)
-  state.value.songList.playlistCount = (result as any).playlistCount
-  state.value.songList.playlists = (result as any).playlists
-  // console.log('result', result)
-}
-
+//跳转歌单详情页
 const gotoSongList = (item: any) => {
   router.push({
     path: '/play-list',
     query: {
-      id: item.id,
-      position: 1
+      id: item.id
     }
   })
 }
-
-const titleClick = () => {}
-
+// 监听路由变化
+// 如果用户在当前搜索页，又在搜索框搜了新词，URL会变，这里要监听并重新 init
 watch(
   () => route.fullPath,
-  (val) => {
+  () => {
     if (route.path === '/search') {
       init()
     }
@@ -91,28 +94,22 @@ watch(
 
 <template>
   <div class="padding-container">
+    <!-- 顶部的提示文案："xxx相关搜索如下" -->
     <span class="keyword"
       >{{ route.query.key }}<span class="keyword-text">的相关搜索如下</span>
     </span>
-    <AreaBox @title-click="titleClick">
+    <AreaBox>
       <template #title>歌单</template>
       <Card
-        v-for="item in state.songList.playlists"
+        v-for="item in searchResult.playlists.list"
         :key="item.id"
         :is-click="true"
         :name="item.name"
         :pic-url="item.coverImgUrl"
         @click="gotoSongList(item)"
       ></Card>
-      <!--      <div @click="gotoSongList(item)" v-for="item in state.songList.playlists" class="card">-->
-      <!--        <div class="img-box">-->
-      <!--          <img :src="item.coverImgUrl" class="img" />-->
-      <!--          <div class="count">{{ formatNumberToMillion(item.playCount) }}</div>-->
-      <!--        </div>-->
-      <!--        <div class="name">{{ item.name }}</div>-->
-      <!--      </div>-->
     </AreaBox>
-
+    <!-- 单曲部分，这个box只负责标题 -->
     <AreaBox :is-move="false">
       <template #title>单曲</template>
     </AreaBox>
@@ -122,11 +119,11 @@ watch(
     :loading="loading"
     :columns="columns"
     :current-song="music.state.currentSong"
-    :list="state.songs.result"
+    :list="searchResult.songs.list"
     :list-info="{ id: 'search', name: '搜索结果' }"
-    :ids="state.songs.result.map((item) => item.id)"
+    :ids="searchResult.songs.list.map((item) => item.id)"
     is-paging
-    :total="state.songs.songCount"
+    :total="searchResult.songs.total"
     :page-size="limit"
     :current-page="page"
     :is-search="false"
@@ -135,13 +132,6 @@ watch(
   ></SongList>
   <!-- 在搜索页的 SongList 传入 listInfo 和 ids，让搜索结果成为当前运行时列表，
    播放结束会继续按这一页（最多50首）循环/随机 -->
-  <!--  <tabs v-model="activeName">-->
-  <!--    <tab-pane-->
-  <!--      v-for="item in tabsConfig"-->
-  <!--      :name="item.name"-->
-  <!--      :label="item.label"-->
-  <!--    ></tab-pane>-->
-  <!--  </tabs>-->
 </template>
 
 <style lang="scss" scoped>

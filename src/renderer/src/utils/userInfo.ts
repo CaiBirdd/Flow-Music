@@ -10,7 +10,7 @@ export const getUserAccountFn = async () => {
   getUserPlayListFn()
 }
 
-// 获取当前用户歌单(包括已收藏)
+// 获取当前用户歌单(包括已收藏) 刷新侧边栏用
 export const getUserPlayListFn = async () => {
   const store = useUserInfo()
   let uid: number | null = null

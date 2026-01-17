@@ -4,7 +4,6 @@ import { useRoute } from 'vue-router'
 import { ref } from 'vue'
 import { useMusicAction } from '@/store/music'
 import { varDayim } from '@/utils'
-import BaseButton from '@/components/BaseButton/index.vue'
 import SongInfo from '@/components/SongInfo/index.vue'
 import SongList from '@/components/SongList/index.vue'
 import { columns } from '@/views/PlayList/config'
@@ -55,8 +54,24 @@ init()
       </div>
     </div>
     <div class="bottom">
-      <BaseButton type="subject">播放全部</BaseButton>
-      <BaseButton>收藏全部</BaseButton>
+      <v-btn
+        class="custom-btn subject-btn"
+        rounded="lg"
+        prepend-icon="mdi-play-circle-outline"
+        variant="flat"
+        height="44"
+      >
+        播放全部
+      </v-btn>
+      <v-btn
+        class="custom-btn default-btn"
+        rounded="lg"
+        prepend-icon="mdi-folder-plus-outline"
+        variant="outlined"
+        height="44"
+      >
+        收藏全部
+      </v-btn>
     </div>
   </div>
   <SongList
@@ -125,6 +140,41 @@ init()
         margin-top: 5px;
         font-size: 12px;
         color: $darkText;
+      }
+    }
+  }
+
+  .bottom {
+    margin-top: 20px;
+
+    .custom-btn {
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: 0.5px;
+
+      & + .custom-btn {
+        margin-left: 12px;
+      }
+    }
+
+    .subject-btn {
+      background-image: linear-gradient(rgb(255, 17, 104), rgb(252, 61, 73));
+      color: white;
+      transition: opacity 0.2s;
+
+      &:hover {
+        opacity: 0.9;
+      }
+    }
+
+    .default-btn {
+      border-color: rgba(255, 255, 255, 0.15);
+      color: white;
+      background-color: rgba(255, 255, 255, 0.05);
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.3);
       }
     }
   }

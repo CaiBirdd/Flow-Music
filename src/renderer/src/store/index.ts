@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { Profile } from '@/api/user'
 import { PlaylistBase, getLikeMusicListIds } from '@/api/musicList'
 import { asideFontSize, MenuConfig, originAsideMenuConfig } from '@/layout/BaseAside/config' //引入侧边栏配置相关的类型和初始数据
-import { useAnonimousLogin } from '@/utils/useLogin' //引入匿名登录工具函数（当用户信息失效时自动走游客登录）
+import { useAnonymousLogin } from '@/utils/useLogin' //引入匿名登录工具函数（当用户信息失效时自动走游客登录）
 import { useMusicAction } from './music' //引入音乐播放器的 Store，在恢复缓存时需要顺便把播放器状态也恢复了
 import { useFlags } from './flags'
 export const useUserInfo = defineStore('userInfoId', {
@@ -105,7 +105,7 @@ export const useUserInfo = defineStore('userInfoId', {
         const flags = useFlags()
         flags.isOpenLogin = true
         this.$reset()
-        useAnonimousLogin()
+        useAnonymousLogin()
         return
       }
       //遍历属性，将传入的 val 赋值给 state.profile 相当于填表哈哈哈

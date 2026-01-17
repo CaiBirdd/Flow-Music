@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useSettings } from '@/store/settings'
 import { checkUrlValidity, isElectron } from '@/utils'
-import Versions from '@/components/Versions.vue'
+import Versions from '@/components/Versions/index.vue'
 import { ElMessage } from 'element-plus'
 import { useUserInfo } from '@/store'
 

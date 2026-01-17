@@ -2,7 +2,6 @@ import { formattingTime } from '@/utils'
 import { GetMusicDetailData, getMusicUrl } from '@/api/musicList'
 import { Columns } from '@/components/SongList/index.vue'
 import { Bottom } from '@element-plus/icons-vue'
-import NotFund from '@/components/NotFund/index.vue'
 import { computed, ref, ComputedRef } from 'vue'
 import { useUserInfo } from '@/store'
 
@@ -87,13 +86,6 @@ export const columns: ComputedRef<Columns[]> = computed(() => {
                     URL.revokeObjectURL(blobUrl)
                   }, 1000)
                 })
-            }
-          }),
-          h(NotFund, {
-            // 只有当前ID匹配时才显示弹窗
-            modelValue: downloadVisible.value === id,
-            'onUpdate:modelValue': (val: boolean) => {
-              downloadVisible.value = val ? id : null
             }
           })
         ])

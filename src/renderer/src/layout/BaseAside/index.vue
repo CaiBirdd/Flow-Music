@@ -10,7 +10,7 @@ import { useFlags } from '@/store/flags'
 import { useRoute, useRouter } from 'vue-router'
 
 import ContextMenu from '@/components/ContextMenu/index.vue'
-import SongListCreator from '../../components/SongListCreator.vue'
+import SongListCreator from '../../components/SongListCreator/index.vue'
 import { deletePlaylist } from '@/api/playlist'
 import { getPlayListDetail, QueuePlaylist } from '@/api/musicList'
 import { getUserPlayListFn } from '../../utils/userInfo'

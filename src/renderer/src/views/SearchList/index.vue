@@ -110,9 +110,10 @@ watch(
       ></Card>
     </AreaBox>
     <!-- 单曲部分，这个box只负责标题 -->
-    <AreaBox :is-move="false">
-      <template #title>单曲</template>
-    </AreaBox>
+    <div class="section-title">
+      单曲
+      <el-icon style="position: relative; top: 1px" :size="16"><ArrowRightBold /></el-icon>
+    </div>
   </div>
   <SongList
     is-loading-endflyback
@@ -177,6 +178,19 @@ watch(
   }
   & + & {
     margin-left: 20px;
+  }
+}
+.section-title {
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  cursor: pointer;
+
+  // 保持和 AreaBox 头部一致的对齐感
+  .el-icon {
+    margin-left: 2px; // 给箭头一点间距
   }
 }
 </style>

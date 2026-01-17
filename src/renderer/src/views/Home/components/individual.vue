@@ -34,7 +34,7 @@ const goToPlaylist = (id: number) => {
 
 <template>
   <!-- 外层容器，Element Plus 的 v-loading 指令控制加载遮罩 -->
-  <div v-loading="loading" class="container">
+  <div class="container">
     <!-- 骨架屏组件：loading 为 true 时显示骨架，false 时显示插槽内容 -->
     <SkeletonCard :loading="loading">
       <!-- 横向滚动容器，标题是“歌单” -->

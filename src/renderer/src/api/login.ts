@@ -59,4 +59,4 @@ export const loginQrCheck = (key: string) =>
 export const loginStatus = (cookie: string) => request.post('/login/status', { cookie })
 
 // 游客登陆 会生成一个临时的游客 cookie
-export const anonimousLogin = () => request.post('/register/anonimous')
+export const anonymousLogin = () => request.post('/register/anonimous')

@@ -112,30 +112,26 @@ const goToAlbum = async (id: number) => {
   <!-- 下方列表容器：AdaptiveListBox 用于自适应布局 -->
   <adaptive-list-box>
     <!-- Tab 切换器 -->
-    <tabs v-model="activeTab">
-      <tab-pane
-        v-for="(item, index) in tabsConfig"
-        :key="index"
-        :name="item.name"
-        :label="item.label"
-      >
-        <!-- 列表容器 -->
-        <adaptive-list :loading="false">
-          <!-- 这里用v-if是因为除了专辑其他是空的,要不然都会渲染成专辑 -->
-          <template v-if="item.name === '1'">
-            <card
-              v-for="albumItem in singerData.albums"
-              :key="albumItem.id"
-              :name="albumItem.name"
-              :pic-url="albumItem.picUrl"
-              is-click
-              is-start-icon
-              @click="goToAlbum(albumItem.id)"
-            ></card>
-          </template>
-        </adaptive-list>
-      </tab-pane>
-    </tabs>
+    <v-tabs v-model="activeTab" align-tabs="center" color="primary">
+      <v-tab v-for="(item, index) in tabsConfig" :key="index" :value="item.name">{{
+        item.label
+      }}</v-tab>
+    </v-tabs>
+    <!-- 列表容器 -->
+    <adaptive-list :loading="false">
+      <!-- 只有在专辑Tab下显示内容 -->
+      <template v-if="activeTab === '1'">
+        <card
+          v-for="albumItem in singerData.albums"
+          :key="albumItem.id"
+          :name="albumItem.name"
+          :pic-url="albumItem.picUrl"
+          is-click
+          is-start-icon
+          @click="goToAlbum(albumItem.id)"
+        ></card>
+      </template>
+    </adaptive-list>
   </adaptive-list-box>
 </template>
 

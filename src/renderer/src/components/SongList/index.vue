@@ -183,7 +183,7 @@ watch(
   <div class="song-list-container" :style="{ overflowY: scroll ? 'auto' : 'visible' }">
     <!-- 搜索框 Vuetify 组件-->
     <div v-if="isSearch" class="search-container" :style="{ display: loading ? 'none' : '' }">
-      <VTextField
+      <v-text-field
         v-model="searchKeyword"
         density="compact"
         placeholder="搜索此列表歌曲"
@@ -263,7 +263,7 @@ watch(
               <template v-else-if="config.type === 'title'">
                 <div class="info-cell">
                   <!-- 封面 -->
-                  <VImg
+                  <v-img
                     style="max-width: 50px"
                     width="50"
                     aspect-ratio="1/1"
@@ -311,7 +311,7 @@ watch(
     <!-- 空状态展示 -->
     <div v-else style="display: grid; place-items: center; gap: 20px">
       <div style="font-size: 20px">没有找到关于"{{ searchKeyword }}"的任何内容</div>
-      <VImg :src="NotFound" width="150" />
+      <v-img :src="NotFound" width="150" />
     </div>
 
     <!-- 分页器 -->

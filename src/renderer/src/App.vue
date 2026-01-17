@@ -11,7 +11,7 @@ import MusicPlayer, { MusicPlayerInstanceType } from '@/components/MusicPlayer/i
 import Login from '@/components/Login/index.vue'
 import { useUserInfo } from '@/store'
 import PlayListDrawer from '@/components/PlayListDrawer/index.vue'
-import '@/utils/shortcutKey'
+import { initGlobalShortcut } from '@/utils/shortcutKey'
 import { useSettings } from '@/store/settings'
 import { useContextMenu } from './components/ContextMenu/useContextMenu'
 
@@ -39,6 +39,10 @@ onMounted(() => {
     window.$audio = audioInstance.value!
     console.log('初始化全局$audio：', window.$audio)
   }
+
+  // 初始化全局快捷键
+  initGlobalShortcut()
+
   // 全局点击监控：点击任意位置关闭“播放列表抽屉”
   document.addEventListener('click', () => {
     flags.isOpenDrawer = false

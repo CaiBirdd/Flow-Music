@@ -68,6 +68,7 @@ export function calculateIsToday(timestamp: number): boolean {
  * 生成指定范围内的随机数
  * Math.random()是 Js 原生的随机函数，它会返回一个 [0, 1) 之间的随机小数
  * @param decimals 是否返回小数 (true则返回小数，false返回整数)
+ * 最后加minNum是为了让从传入的指定起始值开始，要不一直都是0开始了
  */
 export function randomNum(minNum: number, maxNum: number, decimals = false) {
   if (decimals) {
@@ -111,6 +112,7 @@ export const isString = (value: any): value is string => {
  * 1. 预加载图片，保证后续提取颜色有图片数据
  * 2. 避免图片闪烁，图片加载中就去操作会导致闪烁或报错
  * 3. 优化内存使用
+ * 预加载并处理一张网络图片，让它准备好被后续逻辑（比如 Canvas 绘图或颜色提取）安全地使用”
  */
 export function toggleImg(src: string, size?: string): Promise<HTMLImageElement> {
   if (!src) {

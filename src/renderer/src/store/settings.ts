@@ -7,14 +7,14 @@ const USER_SETTINGS = 'USER_SETTINGS'
 // 定义状态接口
 interface SettingsState {
   baseUrl: string
-  lyricBg: 'rgb' | 'rhythm'
+  lyricBgMode: 'rgb' | 'rhythm'
   bold: true
   font: string
 }
 export const useSettings = defineStore('settingsId', () => {
   const state = ref<SettingsState>({
     baseUrl: import.meta.env.VITE_URL, // 默认 API 地址从 .env 文件读取
-    lyricBg: 'rhythm',
+    lyricBgMode: 'rhythm',
     bold: true,
     font: 'Avenir, Helvetica, Arial,sans-serif'
   })

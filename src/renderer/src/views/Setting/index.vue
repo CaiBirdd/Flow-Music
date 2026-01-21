@@ -45,7 +45,7 @@ const setBaseUrl = () => {
 // 切换歌词页背景模式 rhythm: 模糊动态背景 rgb: 纯色渐变背景
 const updateBg = (value: any) => {
   settings.setState({
-    lyricBg: value
+    lyricBgMode: value
   })
 }
 // 切换全局粗体
@@ -89,7 +89,7 @@ const quitLogin = () => {
     <div>
       <!-- 歌词背景模式 -->
       <v-btn-toggle
-        v-model="settings.state.lyricBg"
+        v-model="settings.state.lyricBgMode"
         density="compact"
         @update:model-value="updateBg"
       >

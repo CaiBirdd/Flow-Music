@@ -6,9 +6,10 @@
 interface Props {
   isPlay: boolean
   orderStatusVal: number //播放模式是哪个
-  orderStatus: string[] //播放模式的图标
 }
 defineProps<Props>()
+// 播放模式图标映射: 列表循环 | 随机 | 单曲循环
+const orderStatus = ['icon-xunhuan', 'icon-suijibofang', 'icon-danquxunhuan']
 // 定义该组件会向外触发的所有事件
 const emit = defineEmits([
   'setOrderHandler', // 请求切换播放模式
@@ -31,7 +32,7 @@ const emit = defineEmits([
       </svg>
       <i class="iconfont cut icon-shangyishou" @click="emit('cutSong', false)"></i>
       <i v-show="isPlay" class="iconfont operation icon-Pause" @click="$emit('pause')"></i>
-      <i v-show="!isPlay" class="iconfont operation icon-kaishi1" @click="$emit('play', false)"></i>
+      <i v-show="!isPlay" class="iconfont operation icon-kaishi1" @click="$emit('play')"></i>
       <i class="iconfont cut icon-xiayishou" @click="emit('cutSong', true)"></i>
     </div>
   </div>

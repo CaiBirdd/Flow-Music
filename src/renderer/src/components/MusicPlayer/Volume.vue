@@ -19,7 +19,7 @@ watch(
   () => props.audio,
   () => {
     // 初始化：从 localStorage 读取用户上次设置的音量，如果没有则默认为 1 (100%)
-    const volume = Number(localStorage.getItem('volume') || 1)
+    const volume = Number(localStorage.getItem('volume') || 0.5)
     model.value = volume * 100
     // 设置全局 audio 元素的音量
     window.$audio.el.volume = volume
@@ -29,7 +29,7 @@ watch(
 )
 //点击喇叭静音和恢复
 const volumeHandler = (target: boolean) => {
-  const volume = Number(localStorage.getItem('volume') || 1)
+  const volume = Number(localStorage.getItem('volume') || 0.5)
   model.value = target ? 0 : volume * 100
   window.$audio.el.volume = model.value / 100 //bug修复 点图标没静音
   store.volume = model.value / 100

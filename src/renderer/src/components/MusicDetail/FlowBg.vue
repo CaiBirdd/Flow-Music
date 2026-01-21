@@ -26,7 +26,7 @@ let splitImgFn: ((img: HTMLImageElement) => void) | null = null
  * 执行完整的背景渲染逻辑
  * 包括：颜色提取、渐变背景、节律背景
  */
-const executeFullRender = (bg: string, lyricBg: string) => {
+const executeFullRender = (bg: string, lyricBgMode: string) => {
   // 把 url 字符串变成真正的 HTMLImageElement 对象
   toggleImg(bg, '200y200').then((img) => {
     rgb.value = colorExtraction(img)
@@ -34,14 +34,14 @@ const executeFullRender = (bg: string, lyricBg: string) => {
     music.updateBgColor(bestColors.value) //广播全局
     gradualChange(img, bestColors.value) //双缓冲切歌背景过渡
     // 只有节律背景模式才执行 splitImg（Canvas绘图 + CSS规则插入）
-    if (lyricBg === 'rhythm' && rhythmBoxRef && splitImgFn) {
+    if (lyricBgMode === 'rhythm' && splitImgFn) {
       splitImgFn(img)
     }
   })
 }
 
 /**
- * 执行轻量级渲染（仅颜色提取，给底部播放栏使用）
+ * 执行轻量级渲染（仅颜色提取，给底部播放栏进度条使用）
  * 不执行 gradualChange 和 splitImg，避免后台GPU开销
  */
 const executeLightRender = (bg: string) => {
@@ -54,16 +54,16 @@ const executeLightRender = (bg: string) => {
 
 onMounted(() => {
   // 使用 useTemplateRef
-  // 获取存放旋转节律背景碎片的 rhythm-box 容器（更符合 Vue 数据驱动理念）
+  // 获取存放旋转节律背景碎片的 rhythm-box 容器
   if (!rhythmBoxRef.value) return
   const { splitImg } = useRhythm(rhythmBoxRef.value)
   splitImgFn = splitImg
 
   // 图片切换时，更新流动背景
   watch(
-    [() => props.bg, () => settings.state.lyricBg],
-    ([bg, lyricBg]) => {
-      if (!bg) {
+    [() => props.bg, () => settings.state.lyricBgMode],
+    ([newBg, newLyricBgMode]) => {
+      if (!newBg) {
         return
       }
 
@@ -71,17 +71,17 @@ onMounted(() => {
        * 性能优化 - 休眠机制
        * 问题：MusicDetail 组件使用 CSS transform 隐藏而非 v-if 销毁，
        *       导致 onUnmounted 永不触发，后台切歌时仍执行重渲染逻辑。
-       * 解决：当详情页关闭时，只执行轻量级颜色提取（给底部栏用），
+       * 解决：当详情页关闭时，只执行轻量级颜色提取（给底部进度条栏用），
        *       跳过 gradualChange 和 splitImg 等高开销操作。
        */
       if (!flags.isOpenDetail) {
         // 详情页关闭时：仅更新颜色，不执行 Canvas/CSS/DOM 操作
-        executeLightRender(bg)
+        executeLightRender(newBg)
         return
       }
 
       // 详情页打开时：执行完整渲染流程
-      executeFullRender(bg, lyricBg)
+      executeFullRender(newBg, newLyricBgMode)
     },
     {
       immediate: true // 一上来就先执行一次，不然第一首歌没背景
@@ -99,7 +99,7 @@ onMounted(() => {
     (isOpen) => {
       if (isOpen && props.bg) {
         // 唤醒时执行完整渲染
-        executeFullRender(props.bg, settings.state.lyricBg)
+        executeFullRender(props.bg, settings.state.lyricBgMode)
       }
     }
   )
@@ -108,9 +108,9 @@ onMounted(() => {
 
 <template>
   <div class="flow-bg-container">
+    <div id="gradual0" />
     <div id="gradual1" />
-    <div id="gradual2" />
-    <div v-show="settings.state.lyricBg === 'rhythm'" id="rhythm-box" ref="rhythmBox" />
+    <div v-show="settings.state.lyricBgMode === 'rhythm'" id="rhythm-box" ref="rhythmBox" />
   </div>
 </template>
 
@@ -130,8 +130,8 @@ onMounted(() => {
   contain: layout style;
 }
 
-#gradual1,
-#gradual2 {
+#gradual0,
+#gradual1 {
   height: 100%;
   width: 100%;
   transition: opacity 1s ease-out;
@@ -161,7 +161,17 @@ onMounted(() => {
   /* 子元素样式: 那些被插入进来的小 div 碎片 */
   :global(.cut-image) {
     transition: background-image 0.3s linear;
-    /* 已在JS中添加will-change和contain */
+    animation: rotate 80s infinite linear;
+    /*:global(...)：用于在 scoped 样式块中，穿透作用域，强行选中子组件内部的元素或 JS 动态生成的元素。*/
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(var(--start-deg)) translate3d(0, 0, 0);
+  }
+  to {
+    transform: rotate(calc(var(--start-deg) + 360deg)) translate3d(0, 0, 0);
   }
 }
 </style>

@@ -137,8 +137,8 @@ export const useMusicAction = defineStore('musicActionId', () => {
         window.$audio.reset(true) // 重置播放器状态
         await window.$audio.pause(false) // 先暂停当前播放
         state.value.musicUrl = data[0].url || '' // 设置新的音频 URL
-        window.$audio.cutSongHandler() //通知播放器组件切歌了 (重置歌词进度等)
-        // 将当前状态持久化到 localStorage (以便刷新后恢复)
+        window.$audio.resetLyricPlayer() // 通知播放器组件重置歌词 (初始化歌词等)
+        // 将当前状态持久化到 localStorage (以便刷新后和启动应用时恢复)
         localStorage.setItem('MUSIC_CONFIG', JSON.stringify({ ...state.value, load: true }))
         // 监听 audio 元素的 oncanplay 事件，这就绪后开始播放 下了一段就能播放了
         window.$audio.el.oncanplay = async () => {

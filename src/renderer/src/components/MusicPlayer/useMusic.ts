@@ -37,7 +37,7 @@ export default () => {
       ElMessage.error(message)
       return
     }
-    // 乐观更新：直接从当前视图中移除该歌曲，无需重新加载
+    // 乐观更新：直接从当前视图中移除该歌曲，无需重新加载 按从左到右顺序来
     if (music.state.viewingPlaylist?.id === playId && music.state.viewingPlaylist.tracks) {
       const newTracks = music.state.viewingPlaylist.tracks.filter((track) => track.id !== id)
       music.updateViewingPlaylist({ ...music.state.viewingPlaylist, tracks: newTracks })

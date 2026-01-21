@@ -25,28 +25,28 @@ const flags = useFlags() //获取是否打开详情页
 const model = computed<number>({
   // Getter: 负责“读”，将当前秒数转换为百分比供 UI 显示
   get() {
-    const duration = props.currentSong.dt // 毫秒
+    const duration = props.currentSong.dt // 总时长是毫秒
     if (!duration) return 0
     // currentTime（秒）转毫秒后计算百分比
     return ((music.state.currentTime * 1000) / duration) * 100
   },
   set(val) {
     // Setter: 负责“写”，当用户拖动滑块时，将百分比还原为秒数并设置播放进度
-    const duration = props.currentSong.dt // 毫秒
+    const duration = props.currentSong.dt //总时长是毫秒
     if (!duration) return
     // 百分比转秒，设置播放位置
-    // window.$audio.el.currentTime 是原生 Audio 属性
-    window.$audio.el.currentTime = (val * duration) / 100 / 1000
+    // window.$audio.el.currentTime 是原生 Audio 属性  val是百分比，例如86.2
+    window.$audio.el.currentTime = ((val / 100) * duration) / 1000
   }
 })
 
 // 渐变色（从专辑封面提取，默认红色）
-const gradientColor1 = computed(() =>
-  music.state.bgColor[1] ? `rgb(${music.state.bgColor[1]})` : 'rgb(236, 65, 65)'
+const gradientColor0 = computed(() =>
+  music.state.bgColor[0] ? `rgb(${music.state.bgColor[0]})` : 'rgb(236, 65, 65)'
 )
 
-const gradientColor2 = computed(() =>
-  music.state.bgColor[0] ? `rgb(${music.state.bgColor[0]})` : 'rgb(236, 65, 65)'
+const gradientColor1 = computed(() =>
+  music.state.bgColor[1] ? `rgb(${music.state.bgColor[1]})` : 'rgb(236, 65, 65)'
 )
 </script>
 
@@ -56,8 +56,8 @@ const gradientColor2 = computed(() =>
     :class="['base-progress-bar', flags.isOpenDetail ? 'detail-progress' : 'view-progress']"
     style="width: 100%"
     :style="{
-      '--gradient-color-1': gradientColor1,
-      '--gradient-color-2': gradientColor2
+      '--gradient-color-0': gradientColor0,
+      '--gradient-color-1': gradientColor1
     }"
   >
     <v-slider v-model="model"></v-slider>
@@ -100,7 +100,7 @@ const gradientColor2 = computed(() =>
   height: 30px;
   :deep(.v-slider-track__fill) {
     height: 6px;
-    background-image: linear-gradient(to right, var(--gradient-color-1), var(--gradient-color-2));
+    background-image: linear-gradient(to right, var(--gradient-color-0), var(--gradient-color-1));
     opacity: 0.8;
     border-radius: 6px;
     background-color: transparent;

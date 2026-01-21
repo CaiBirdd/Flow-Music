@@ -20,15 +20,12 @@ interface Props {
   lyric: LyricLine[] // 歌词数据（虽然本组件不直接用，但用来判断是否显示）
   title: string // 歌名
   bg?: string // 封面图 URL
-  isBlur?: boolean // 是否开启背景模糊（用于性能降级）
   ar: any[] // 歌手数组
   videoPlayUrl: string | null // 动态视频封面 URL
 }
 
 // 默认 Props 设置
-const props = withDefaults(defineProps<Props>(), {
-  isBlur: true
-})
+const props = defineProps<Props>()
 
 const router = useRouter()
 const flash = useFlags() // 全局状态：用于检测详情页是否打开
@@ -44,8 +41,6 @@ let currentTimeline: gsap.core.Timeline | null = null
 // 使用 useTemplateRef (Vue 3.5+) 替代 document.querySelector，更安全且符合组件化原则
 const bgElRef = useTemplateRef<HTMLDivElement>('bgElRef') // 封面容器（负责尺寸动画）
 
-// 优化：使用响应式样式替代直接的 DOM 操作
-// 这样更符合 Vue 的声明式编程范式，也无需维护 coverElRef
 const coverImage = ref('')
 
 // 用于追踪当前加载的图片URL，防止竞态条件 (Race Condition)
@@ -59,7 +54,7 @@ let currentLoadingBg: string | null = null
  *    - false (切歌时): 执行 "缩小 -> 加载 -> 放大" 的完整动画
  *    - true (唤醒时): 直接显示最终状态，跳过动画，避免用户感到拖沓
  */
-const executeCoverAnimation = (val: string, immediate: boolean = false) => {
+const executeCoverAnimation = (val?: string, immediate: boolean = false) => {
   if (!bgElRef.value || !val) return
 
   // 1. 锁定当前请求 ID
@@ -73,13 +68,13 @@ const executeCoverAnimation = (val: string, immediate: boolean = false) => {
   // 3. 创建新的 GSAP 时间轴
   currentTimeline = gsap.timeline()
 
-  // 4. 如果不是立即显示，先执行"缩小"动画 (10vh)
+  // 4. 如果不是立即显示，先执行"缩小"动画 (15vh)
   // 这会给用户一种"旧碟片收回去，新碟片拿出来"的视觉暗示
   if (!immediate) {
     currentTimeline.to(bgElRef.value, {
-      height: '10vh',
-      width: '10vh',
-      duration: 0.3,
+      height: '15vh',
+      width: '15vh',
+      duration: 0.5,
       ease: 'power1.out',
       transformOrigin: 'center'
     })
@@ -100,6 +95,7 @@ const executeCoverAnimation = (val: string, immediate: boolean = false) => {
 
     /**
      * 【唤醒模式 / Immediate 优化】
+     *
      * 如果是唤醒模式，不需要动画，直接啪一下把图贴上去，尺寸设为最大。
      */
     if (immediate && !props.videoPlayUrl) {
@@ -148,7 +144,7 @@ nextTick(() => {
   watch(
     () => props.bg,
     async (val) => {
-      if (!bgElRef.value || !val) return
+      // 移除冗余检查，executeCoverAnimation 内部已有检查
 
       /**
        * 【性能优化 - 休眠机制 (Sleep Implementation)】
@@ -178,7 +174,6 @@ nextTick(() => {
   /**
    * 【唤醒机制 (Wake-up Implementation)】
    * 监听详情页打开状态。
-   *
    * 场景：用户在后台切了 10 首歌 (触发了上面的休眠)，现在打开详情页。
    * 此时界面上可能还是第 1 首歌的封面，或者什么都没有。
    *
@@ -193,7 +188,6 @@ nextTick(() => {
     }
   )
 })
-
 /**
  * 歌手名格式化
  * 例如：[{name: '周杰伦'}, {name: '阿信'}] => "周杰伦/阿信"
@@ -201,10 +195,23 @@ nextTick(() => {
 const arNames = computed(() => {
   return props.ar.map((item) => item.name).join('/')
 })
+
+/**
+ * 跳转到歌手搜索页
+ */
+const handleSearchClick = () => {
+  flash.isOpenDetail = false
+  router.push({
+    path: `/search`,
+    query: {
+      key: props.title + '-' + arNames.value
+    }
+  })
+}
 </script>
 
 <template>
-  <div :style="{ 'backdrop-filter': isBlur ? 'blur(0px)' : 'none' }" class="shadow">
+  <div class="shadow">
     <div class="lyric-and-bg-container">
       <div
         ref="bgElRef"
@@ -213,20 +220,7 @@ const arNames = computed(() => {
       >
         <!-- 封面容器 对应 JS 中的 bgElRef，用于 GSAP 执行缩放/放大动画。-->
         <!-- transform的逻辑是 没有歌词让封面固定在中间-->
-        <div
-          class="title"
-          @click="
-            () => {
-              flash.isOpenDetail = false
-              router.push({
-                path: `/search`,
-                query: {
-                  key: props.title + '-' + arNames
-                }
-              })
-            }
-          "
-        >
+        <div class="title" @click="handleSearchClick">
           {{ props.title }} -
           <span v-for="(item, index) in props.ar" :key="item.id"
             >{{ item.name }} <span v-if="props.ar.length - 1 !== index">/</span></span
@@ -258,22 +252,18 @@ const arNames = computed(() => {
 <style scoped lang="scss">
 /*
  * 歌词显示层性能优化说明:
- * 1. backdrop-filter 是高开销属性，使用 will-change 提示浏览器预优化
  * 2. 使用 contain 属性隔离重绘范围
  * 3. 使用 transform: translate3d 开启GPU合成层
  */
 .shadow {
-  backdrop-filter: blur(8px); /*/毛玻璃效果，但现在调低后效果不明显了 */
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
-  /* GPU加速优化 - backdrop-filter是高开销属性 */
-  will-change: backdrop-filter;
+  /* GPU加速优化 */
   transform: translate3d(0, 0, 0);
-  backface-visibility: hidden;
   /* 限制重绘范围 */
   contain: layout style;
 
@@ -289,11 +279,6 @@ const arNames = computed(() => {
     .cover-container {
       width: 45vh;
       transform-origin: center;
-      /* 优化: 明确指定过渡属性 */
-      transition:
-        width 0.8s ease-out,
-        height 0.8s ease-out;
-      will-change: width, height;
     }
 
     .title {
@@ -326,9 +311,14 @@ const arNames = computed(() => {
       overflow: auto;
 
       /* 
-       * 歌词遮罩效果 (Fade In/Out)
+       * 歌词遮罩效果 (Fade In/Out)学两个是为了浏览器兼容
        * 上下各保留 10% 的透明渐变，让歌词滚动时有"消失在虚空中"的感觉
-       */
+       * to bottom 方向：从上往下画 
+         transparent  0% 处：完全透明 (歌词看不见)
+         black 10% 10% 处：全黑/完全不透明 (歌词完全显示)
+         black 90% 90% 处：全黑/完全不透明 (歌词完全显示)
+         transparent 100% 处：完全透明 (歌词看不见) 
+      */
       mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
       -webkit-mask-image: linear-gradient(
         to bottom,

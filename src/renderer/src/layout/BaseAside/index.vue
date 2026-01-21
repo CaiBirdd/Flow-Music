@@ -157,8 +157,16 @@ const openDialog = () => {
           </div>
           <!-- 分支 A：可折叠类型的区块 创建的歌单和收藏的歌单 -->
           <template v-if="menuItem.type === 'collapsed'">
-            <!-- class 'expanded' 控制高度展开/收起 -->
-            <div class="collapse-wrapper" :class="{ expanded: menuItem.isCollapsed }">
+            <!-- 
+               重构注：直接根据 store中collapsedState 来判断 
+               逻辑：store里有记录 ??就用store中的，没有就用配置中的
+            -->
+            <div
+              class="collapse-wrapper"
+              :class="{
+                expanded: store.collapsedState[menuItem.mark as string] ?? menuItem.isCollapsed
+              }"
+            >
               <div class="collapse-inner">
                 <!-- 遍历该区块下的所有子菜单项 (item) -->
                 <template v-for="item in menuItem.list" :key="item.id">

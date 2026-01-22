@@ -112,7 +112,7 @@ export function parseLRC(lrcStr: string): ParseResult {
 
   // 7. 计算时长 duration 并重置 index
   for (let i = 0; i < result.length; i++) {
-    result[i].index = i // 保证 index 0,1,2,3... 连续
+    result[i].index = i // 保证索引index 0,1,2,3... 连续
     if (i < result.length - 1) {
       // 这一句时长 = 下一句开始 - 这一句开始
       result[i].duration = result[i + 1].time - result[i].time
@@ -142,7 +142,7 @@ export function mergeLyricsWithTranslation(
     return original.lines
   }
 
-  // 把翻译歌词转换成一个 Map,这样可以避免双重for循环
+  // 把翻译歌词转换成一个 Map哈希表,这样可以避免双重for循环
   // Key: 时间 (number) -> Value: 翻译文本 (string)
   // 这样以后查翻译，只需要 O(1) 的时间复杂度
   const translationMap = new Map<number, string>()

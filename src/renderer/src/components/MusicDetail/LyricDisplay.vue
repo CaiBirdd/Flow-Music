@@ -1,7 +1,7 @@
 ﻿<script lang="ts" setup>
 import { toggleImg } from '@/utils'
 import type { LyricLine } from '@/utils/lyric'
-import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import gsap from 'gsap'
 import { useRouter } from 'vue-router'
 import { useFlags } from '@/store/flags'
@@ -13,7 +13,7 @@ import { useFlags } from '@/store/flags'
  * 1. 音乐详情页的核心容器，展示歌曲信息（标题、歌手）。
  * 2. 处理封面图的平滑切换与缩放动画 (GSAP)。
  * 3. 作为歌词渲染的"宿主"容器 (.lyric-container)，实际歌词逻辑由 MusicPlayer 组件挂载。
- * 4. 极致的性能优化：包含休眠机制、硬件加速、防竞态处理。
+ * 4. 极致的性能优化：包含休眠机制（不可见时清除切歌动画，注意不是背景的，那个在FlowBg）、硬件加速、防竞态处理。
  */
 
 interface Props {
@@ -28,17 +28,16 @@ interface Props {
 const props = defineProps<Props>()
 
 const router = useRouter()
-const flash = useFlags() // 全局状态：用于检测详情页是否打开
+const flags = useFlags() // 全局状态：用于检测详情页是否打开
 
 // 视频元素引用
 const videoCover = useTemplateRef<HTMLVideoElement>('videoCover')
 
-// GSAP动画实例，用于清理上一个动画防止累积
+// GSAP动画实例，用于清理上一个动画防止累积.core: GSAP 暴露出来的核心模块属性 .Timeline: 具体的时间轴（Timeline）类/类型
 // 必须在组件卸载或切歌时清理，否则会造成内存泄漏和动画冲突
 let currentTimeline: gsap.core.Timeline | null = null
 
 // 保存 DOM 引用，供唤醒时使用
-// 使用 useTemplateRef (Vue 3.5+) 替代 document.querySelector，更安全且符合组件化原则
 const bgElRef = useTemplateRef<HTMLDivElement>('bgElRef') // 封面容器（负责尺寸动画）
 
 const coverImage = ref('')
@@ -57,7 +56,7 @@ let currentLoadingBg: string | null = null
 const executeCoverAnimation = (val?: string, immediate: boolean = false) => {
   if (!bgElRef.value || !val) return
 
-  // 1. 锁定当前请求 ID
+  // 1. 锁定当前请求 URL
   currentLoadingBg = val
 
   // 2. 清理旧动画
@@ -109,7 +108,7 @@ const executeCoverAnimation = (val?: string, immediate: boolean = false) => {
     currentTimeline.to(bgElRef.value, {
       height: '45vh',
       width: '45vh',
-      duration: 0.3,
+      duration: 0.5,
       ease: 'power1.out',
       transformOrigin: 'center',
       onStart: () => {
@@ -122,7 +121,7 @@ const executeCoverAnimation = (val?: string, immediate: boolean = false) => {
   })
 }
 
-nextTick(() => {
+onMounted(() => {
   // 监听播放状态，控制视频封面播放/暂停
   watch(
     () => window.$audio?.isPlay,
@@ -157,7 +156,7 @@ nextTick(() => {
        * 2. 当详情页打开时：
        *    正常执行渲染。
        */
-      if (!flash.isOpenDetail) {
+      if (!flags.isOpenDetail) {
         if (currentTimeline) {
           currentTimeline.kill()
           currentTimeline = null
@@ -180,7 +179,7 @@ nextTick(() => {
    * 动作：检测到打开时，强制执行一次渲染 (immediate=true)，把最新的封面补上去。
    */
   watch(
-    () => flash.isOpenDetail,
+    () => flags.isOpenDetail,
     (isOpen) => {
       if (isOpen && props.bg) {
         executeCoverAnimation(props.bg, true)
@@ -200,7 +199,7 @@ const arNames = computed(() => {
  * 跳转到歌手搜索页
  */
 const handleSearchClick = () => {
-  flash.isOpenDetail = false
+  flags.isOpenDetail = false
   router.push({
     path: `/search`,
     query: {
@@ -213,19 +212,10 @@ const handleSearchClick = () => {
 <template>
   <div class="shadow">
     <div class="lyric-and-bg-container">
-      <div
-        ref="bgElRef"
-        class="cover-container"
-        :style="{ transform: props.lyric.length ? '' : 'translateX(0)' }"
-      >
+      <div ref="bgElRef" class="cover-container">
         <!-- 封面容器 对应 JS 中的 bgElRef，用于 GSAP 执行缩放/放大动画。-->
         <!-- transform的逻辑是 没有歌词让封面固定在中间-->
-        <div class="title" @click="handleSearchClick">
-          {{ props.title }} -
-          <span v-for="(item, index) in props.ar" :key="item.id"
-            >{{ item.name }} <span v-if="props.ar.length - 1 !== index">/</span></span
-          >
-        </div>
+        <div class="title" @click="handleSearchClick">{{ props.title }} - {{ arNames }}</div>
         <video
           v-if="props.videoPlayUrl"
           ref="videoCover"
@@ -233,13 +223,10 @@ const handleSearchClick = () => {
           autoplay
           loop
           muted
-          :src="props.videoPlayUrl || undefined"
+          :src="props.videoPlayUrl"
         ></video>
         <!-- 
-          静态图片封面 (.img-cover)
-          优化：
-          1. 使用 v-else 与上面的 video 形成互斥，DOM 结构更清晰。
-          2. 使用 :style 绑定响应式变量 coverImage，替代原本的 imperative DOM 操作。
+          静态图片封面 (.img-cover)使用 v-else 与上面的 video 形成互斥，DOM 结构更清晰。
         -->
         <div v-else class="img-cover" :style="{ backgroundImage: coverImage }" />
       </div>
@@ -270,11 +257,9 @@ const handleSearchClick = () => {
   .lyric-and-bg-container {
     display: flex;
     margin-top: 17vh;
-    justify-content: space-evenly;
+    justify-content: space-evenly; //只有图无歌词就居中显示
     align-items: center;
     height: 58vh;
-    /* 优化: 仅对transform属性使用过渡，避免触发全属性过渡 */
-    transition: transform 1s ease-out;
 
     .cover-container {
       width: 45vh;
@@ -309,24 +294,6 @@ const handleSearchClick = () => {
       width: 42vw;
       border-radius: 5px;
       overflow: auto;
-
-      /* 
-       * 歌词遮罩效果 (Fade In/Out)学两个是为了浏览器兼容
-       * 上下各保留 10% 的透明渐变，让歌词滚动时有"消失在虚空中"的感觉
-       * to bottom 方向：从上往下画 
-         transparent  0% 处：完全透明 (歌词看不见)
-         black 10% 10% 处：全黑/完全不透明 (歌词完全显示)
-         black 90% 90% 处：全黑/完全不透明 (歌词完全显示)
-         transparent 100% 处：完全透明 (歌词看不见) 
-      */
-      mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
-      -webkit-mask-image: linear-gradient(
-        to bottom,
-        transparent,
-        black 10%,
-        black 90%,
-        transparent
-      );
 
       position: relative;
 

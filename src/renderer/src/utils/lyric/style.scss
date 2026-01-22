@@ -18,6 +18,15 @@
   }
 
   // 顶部和底部渐变遮罩，营造聚焦中心行的视觉效果
+  /* 
+       * 写两个是为了浏览器兼容
+       * 上下各保留 12% 的透明渐变，让歌词滚动时有"消失在虚空中"的感觉
+       * to bottom 方向：从上往下画 
+         transparent  0% 处：完全透明 (歌词看不见)
+         black 12% 12% 处：全黑/完全不透明 (歌词完全显示)
+         black 88% 88% 处：全黑/完全不透明 (歌词完全显示)
+         transparent 100% 处：完全透明 (歌词看不见) 
+      */
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
@@ -97,10 +106,7 @@
 
   // 当前播放行高亮状态
   &.active {
-    font-size: 26px;
-    //font-weight: 700;
     color: rgba(255, 255, 255, 0.95);
-    min-height: 60px;
     text-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
 
     filter: blur(0); // 高亮时清晰
@@ -112,10 +118,8 @@
     }
 
     .lyric-translation {
-      font-size: 18px;
       color: rgba(255, 255, 255, 0.95);
       text-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
-      letter-spacing: 0.8px;
     }
   }
 

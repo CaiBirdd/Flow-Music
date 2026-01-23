@@ -223,6 +223,9 @@ export function isGoodColor(r: number, g: number, b: number) {
 /**
  * 从一组颜色中选出 num 个“最好”的颜色
  * 算法思路：优先选 isGoodColor 的，然后选差异化最大的
+ * 用于从封面颜色中选取“适合作为渐变背景”的颜色
+ * 目标：色相保持相对一致，通过亮度和饱和度拉开层次，避免脏色
+ * 策略：牺牲色彩丰富度（不选红配绿），换取视觉协调性（同色系的深浅渐变）
  */
 export function findBestColors(
   colors: Array<[number, number, number]>,
@@ -246,6 +249,8 @@ export function findBestColors(
       const minDifference = bestColors.reduce((min, colorItem) => {
         const hsl1 = rgbToHsl(...colorItem)
         const hsl2 = rgbToHsl(...color)
+        // 核心逻辑：这里只计算了饱和度(S)和亮度(L)的差异，有意忽略了色相(H)
+        // 这样选出来的颜色虽然色相接近（同色系），但明暗和浓淡反差大，最适合做渐变背景
         const difference = Math.abs(hsl1[1] - hsl2[1]) + Math.abs(hsl1[2] - hsl2[2])
         return Math.min(min, difference)
       }, Infinity)

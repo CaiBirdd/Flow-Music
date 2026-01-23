@@ -93,12 +93,12 @@ export function isGoodColor(r: number, g: number, b: number) {
 
 ### 4. ⭐ 节奏感流动背景动画
 
-**技术栈**：Canvas 图像分割 + CSS Animation + 动态样式注入
+**技术栈**：Canvas 图像分割 + CSS Animation + CSS Variables
 
 **亮点描述**：
 
 - 将专辑封面切割为 2×2 的四个区块，每个区块独立旋转动画
-- 动态生成 CSS Keyframes，每个区块随机起始角度
+- 使用 CSS Variables (`--start-deg`) 控制每个区块的随机起始角度，避免动态注入 CSS 规则
 - 配合 `filter: blur(120px)` 模糊效果，创造沉浸式视觉体验
 
 **代码示例**：
@@ -109,9 +109,9 @@ const splitImg = (img: HTMLImageElement) => {
     for (let x = 0; x < 2; x++) {
       // Canvas 切割图像
       cutCtx.drawImage(img, x * smallImageWidth, y * smallImageHeight, ...)
-      // 动态注入 CSS 动画
+      // 使用 CSS Variables 设置随机起始角度
       const deg = Math.floor(Math.random() * 360)
-      stylesheet?.insertRule(`@keyframes cut-rotate-${index} { ... }`)
+      imgEl.style.setProperty('--start-deg', `${deg}deg`)
     }
   }
 }
@@ -190,18 +190,7 @@ router.push = (params) => {
 
 ---
 
-### 8. ⭐ 音频事件监听器系统
-
-**技术栈**：发布订阅模式
-
-**亮点描述**：
-
-- 实现轻量级事件总线，支持歌曲切换、首次加载等事件
-- 支持监听器的暂停与恢复，避免重复触发
-
----
-
-### 9. ⭐ 进度条动态样式
+### 8. ⭐ 进度条动态样式
 
 **技术栈**：CSS Variables + computed
 
@@ -212,7 +201,7 @@ router.push = (params) => {
 
 ---
 
-### 10. ⭐ Electron 主进程与渲染进程通信
+### 9. ⭐ Electron 主进程与渲染进程通信
 
 **技术栈**：Electron IPC
 
@@ -223,7 +212,7 @@ router.push = (params) => {
 
 ---
 
-### 11. ⭐ 全局快捷键系统
+### 10. ⭐ 全局快捷键系统
 
 **技术栈**：keydown 事件监听
 
@@ -235,9 +224,7 @@ router.push = (params) => {
 
 ---
 
-//从这往后是第二次找的
-
-### 12. ⭐ 搜索建议高亮与防抖优化
+### 11. ⭐ 搜索建议高亮与防抖优化
 
 **技术栈**：正则表达式 + Promise.all 并发请求
 
@@ -271,39 +258,7 @@ const [suggest, songs] = await Promise.all([
 
 ---
 
-### 13. ⭐ 歌曲列表搜索定位与高亮动画
-
-**技术栈**：Web Animations API + nextTick + scrollIntoView
-
-**亮点描述**：
-
-- 从搜索结果跳转到歌单时，自动定位到对应歌曲位置
-- 使用 `Web Animations API` 实现背景色渐变高亮动画，3 秒后淡出
-- `nextTick` 确保 DOM 渲染完成后再执行滚动和动画
-
-**代码示例**：
-
-```typescript
-nextTick(() => {
-  const targetEl = itemRefs.value[target.id]
-  scrollEl.scrollTo({ top: targetEl.offsetTop, behavior: 'smooth' })
-  targetEl
-    .animate(
-      [
-        { backgroundColor: 'rgba(255, 255, 255, 0.06)' },
-        { backgroundColor: 'rgba(255, 255, 255, 0)' }
-      ],
-      { duration: 1300, easing: 'ease-in-out', delay: 3000 }
-    )
-    .finished.then(() => {
-      targetEl.style.backgroundColor = ''
-    })
-})
-```
-
----
-
-### 14. ⭐ Teleport 动态传送播放器组件
+### 12. ⭐ Teleport 动态传送播放器组件
 
 **技术栈**：Vue3 Teleport + 条件渲染
 
@@ -323,7 +278,7 @@ nextTick(() => {
 
 ---
 
-### 15. ⭐ 封面图片切换防闪烁处理
+### 13. ⭐ 封面图片切换防闪烁处理
 
 **技术栈**：Image 预加载 + Promise 封装
 
@@ -348,7 +303,7 @@ export function toggleImg(src: string, size?: string): Promise<HTMLImageElement>
 
 ---
 
-### 16. ⭐ Axios 请求/响应拦截器封装
+### 14. ⭐ Axios 请求/响应拦截器封装
 
 **技术栈**：Axios 拦截器 + Cookie 注入
 
@@ -371,7 +326,7 @@ request.interceptors.request.use((config) => {
 
 ---
 
-### 17. ⭐ 嵌套属性安全取值工具函数
+### 15. ⭐ 嵌套属性安全取值工具函数
 
 **技术栈**：递归字符串解析
 
@@ -397,7 +352,7 @@ export function lookup(obj: object, key: string): any {
 
 ---
 
-### 18. ⭐ 表格列配置化渲染
+### 16. ⭐ 表格列配置化渲染
 
 **技术栈**：Vue3 h 函数 + 配置驱动
 
@@ -420,35 +375,13 @@ export const columns: Columns[] = [
 
 ---
 
-### 19. ⭐ 全局组件批量注册插件
+### 17. ⭐ 扫码登录状态轮询
 
-**技术栈**：Vue3 插件机制
-
-**亮点描述**：
-
-- 封装通用组件（Tabs、Card、Button 等）为插件
-- 一次注册，全局可用，无需逐个 import
-- 遵循 Vue3 插件规范，通过 `app.use()` 调用
-
-**代码示例**：
-
-```typescript
-const componentArr = [Tabs, TabPane, BaseButton, Card]
-export default (app: App) => {
-  componentArr.forEach((component) => {
-    if (component.name) app.component(component.name, component)
-  })
-}
-```
-
----
-
-### 20. ⭐ 扫码登录状态轮询
-
-**技术栈**：setInterval + 状态机
+**技术栈**：Vue3 Composables + setInterval + 状态机
 
 **亮点描述**：
 
+- 使用 Composables 模式封装二维码登录逻辑，代码结构清晰
 - 轮询检测二维码扫码状态（等待扫码→授权中→登录成功/过期）
 - 二维码过期自动刷新，无需用户手动操作
 - 登录成功后自动关闭弹窗并刷新用户数据
@@ -456,39 +389,38 @@ export default (app: App) => {
 **代码示例**：
 
 ```typescript
-timer = setInterval(async () => {
-  const { code, cookie } = await loginQrCheck(key.value)
-  if (code === 800) {
-    clearInterval(timer)
-    init()
-  } // 过期重新生成
-  else if (code === 802) {
-    flag.value = true
-  } // 授权中
-  else if (code === 803) {
-    // 登录成功
-    clearInterval(timer)
-    localStorage.setItem('MUSIC_U', cookie)
-    getUserAccountFn()
+// Composables 模式封装二维码登录逻辑
+const useQrCodeLogin = () => {
+  const qrKey = ref('')
+  const qrUrl = ref('')
+  const qrStatus = ref<'loading' | 'waiting' | 'scanning' | 'success' | 'expired'>('loading')
+  let qrTimer: NodeJS.Timeout | null = null
+
+  const startCheck = () => {
+    qrTimer = setInterval(async () => {
+      const { code, cookie } = await loginQrCheck(qrKey.value)
+      if (code === 800) {
+        qrStatus.value = 'expired'
+        stopCheck()
+        getQrCode() // 过期自动刷新
+      } else if (code === 802) {
+        qrStatus.value = 'scanning'
+      } else if (code === 803) {
+        qrStatus.value = 'success'
+        stopCheck()
+        localStorage.setItem('MUSIC_U', cookie)
+        getUserAccountFn()
+      }
+    }, 3000)
   }
-}, 3000)
+
+  return { qrUrl, qrStatus, getQrCode, stopCheck }
+}
 ```
 
 ---
 
-### 21. ⭐ 心动模式智能推荐
-
-**技术栈**：网易云 API + 播放队列动态更新
-
-**亮点描述**：
-
-- "我喜欢的音乐"歌单专属心动模式
-- 根据当前播放歌曲智能推荐相似歌曲
-- 切换播放模式时自动更新播放队列
-
----
-
-### 22. ⭐ SCSS 主题变量与混合宏
+### 18. ⭐ SCSS 主题变量与混合宏
 
 **技术栈**：SCSS Mixin + CSS Variables
 
@@ -515,7 +447,7 @@ $bgColor: rgb(19, 19, 26); // 全局背景色
 
 ---
 
-### 23. ⭐ 动态封面视频支持
+### 19. ⭐ 动态封面视频支持
 
 **技术栈**：HTML5 Video + 条件渲染
 
@@ -527,7 +459,7 @@ $bgColor: rgb(19, 19, 26); // 全局背景色
 
 ---
 
-### 24. ⭐ 内存泄漏修复与资源管理
+### 20. ⭐ 内存泄漏修复与资源管理
 
 **技术栈**：Vue3 生命周期 + 定时器管理 + 事件监听清理 + 休眠机制
 
@@ -536,7 +468,6 @@ $bgColor: rgb(19, 19, 26); // 全局背景色
 - 系统性排查并修复内存泄漏，内存占用从持续增长 1.2GB 优化到稳定 500MB
 - **定时器清理**：递归 setTimeout 在组件卸载时正确清理，避免闭包累积
 - **GSAP 动画销毁**：切换歌曲前 `kill()` 旧的 timeline 实例
-- **数组长度限制**：播放历史 `lastIndexList` 限制最大 100 条
 - **Image 事件清理**：加载完成后手动置空 `onload`/`onerror` 处理器
 - **LyricPlayer 销毁**：实现 `destroy()` 方法清理事件监听和 DOM 引用
 - **休眠机制**：对于使用 CSS 隐藏而非 v-if 的组件（如 MusicDetail），采用"休眠"模式跳过重渲染，而非依赖 `onUnmounted`
@@ -585,26 +516,19 @@ if (state.value.lastIndexList.length > MAX_HISTORY_LENGTH) {
 
 ---
 
-### 25. ⭐ Canvas 性能优化与对象池复用
+### 21. ⭐ Canvas 性能优化
 
-**技术栈**：Canvas API + 对象池模式 + requestAnimationFrame
+**技术栈**：Canvas API + CSS Variables
 
 **亮点描述**：
 
-- **Canvas 对象池**：预创建 4 个 Canvas 对象复用，避免每次切换图片都创建新实例
 - **Canvas 配置优化**：`alpha: false` 禁用透明通道、`desynchronized: true` 异步渲染
 - **图片质量权衡**：使用 JPEG 格式 + 0.6 质量参数，配合模糊效果降低内存占用
-- **CSS 规则清理**：动态注入的 Keyframes 规则在更新前清理旧规则，防止累积
+- **CSS Variables 替代动态注入**：使用 `--start-deg` 变量控制动画起始角度，避免动态操作 StyleSheet
 
 **代码示例**：
 
 ```typescript
-// Canvas 对象池
-const canvasPool: HTMLCanvasElement[] = []
-for (let i = 0; i < 4; i++) {
-  canvasPool.push(document.createElement('canvas'))
-}
-
 // Canvas 性能配置
 const cutCtx = cutCanvas.getContext('2d', {
   alpha: false, // 禁用透明通道
@@ -613,6 +537,9 @@ const cutCtx = cutCanvas.getContext('2d', {
 
 // 低质量图片减少内存
 const imgUrl = cutCanvas.toDataURL('image/jpeg', 0.6)
+
+// CSS Variables 控制动画（替代动态 StyleSheet 注入）
+imgEl.style.setProperty('--start-deg', `${deg}deg`)
 ```
 
 ---
@@ -638,13 +565,13 @@ const imgUrl = cutCanvas.toDataURL('image/jpeg', 0.6)
 
 **简历描述建议**：
 
-> 构建完整的动态主题视觉系统：使用 **ColorThief** 从专辑封面提取主色调，通过 **RGB→HSL 颜色空间转换**过滤不适合的颜色，选取色差最大的颜色组合；使用 **Canvas API** 将封面切割为 2×2 区块实现节奏感流动背景，动态生成 CSS Keyframes 注入样式表；实现**双缓冲渐变过渡**避免背景切换闪烁，配合 GPU 加速优化性能。
+> 构建完整的动态主题视觉系统：使用 **ColorThief** 从专辑封面提取主色调，通过 **RGB→HSL 颜色空间转换**过滤不适合的颜色，选取色差最大的颜色组合；使用 **Canvas API** 将封面切割为 2×2 区块实现节奏感流动背景，通过 **CSS Variables** 控制动画起始角度；实现**双缓冲渐变过渡**避免背景切换闪烁，配合 GPU 加速优化性能。
 
 **面试可讲点**：
 
 - HSL 颜色模型的优势及"好颜色"判断算法
 - Canvas 图像切割与 `toDataURL` 性能优化（使用 JPEG 格式、降低质量）
-- 动态 CSS Keyframes 注入与清理（防止规则累积导致内存泄漏）
+- CSS Variables 替代动态 StyleSheet 注入的优势（避免内存泄漏）
 - 双缓冲（双层渐变 + opacity 切换）实现平滑过渡
 - `will-change`、`transform: translate3d`、`contain` 等 GPU 加速技巧
 
@@ -669,7 +596,7 @@ const imgUrl = cutCanvas.toDataURL('image/jpeg', 0.6)
 
 **简历描述建议**：
 
-> 实现播放/暂停时的**音量平滑过渡**效果，使用 **Promise** 封装异步过渡逻辑，支持链式调用，区分常规过渡和加长过渡两种模式，提升用户听觉体验。
+> 实现播放/暂停时的**音量平滑过渡**效果，使用 **Promise** 封装异步过渡逻辑，支持链式调用，提升用户听觉体验。
 
 **面试可讲点**：
 
@@ -698,9 +625,9 @@ const imgUrl = cutCanvas.toDataURL('image/jpeg', 0.6)
 ```
 音乐播放器桌面应用 | Electron + Vue3 + TypeScript
 - 自研 LRC 歌词解析播放系统，二分查找定位当前行（O(log n)），requestAnimationFrame 时间同步，GSAP 平滑滚动
-- 动态主题视觉系统：ColorThief 提取封面主色调 + HSL 颜色过滤 + Canvas 图像分割流动背景 + 双缓冲渐变过渡
+- 动态主题视觉系统：ColorThief 提取封面主色调 + HSL 颜色过滤 + Canvas 图像分割流动背景 + CSS Variables 动画控制
 - 基于 Vue3 Composables 实现可复用右键菜单，Symbol 作为 inject key + Teleport 跨层级渲染 + 多菜单互斥管理
-- Canvas 对象池复用 + GPU 加速优化（will-change、contain、translate3d），提升动画渲染性能
+- Canvas 性能优化 + GPU 加速（will-change、contain、translate3d），提升动画渲染性能
 - 封装音量渐变 Promise，实现播放/暂停平滑过渡，提升用户体验
 - 重写 router.push 实现路由深度追踪，配合前置守卫实现智能返回逻辑
 ```
@@ -725,13 +652,43 @@ const imgUrl = cutCanvas.toDataURL('image/jpeg', 0.6)
 
 ## 📊 项目亮点数量统计
 
-- **总亮点数**：25 个
-- **核心技术亮点**：9 个（歌词系统、颜色提取、动画、音量过渡、内存优化等）
-- **工程化亮点**：7 个（Axios 封装、组件注册、配置化渲染、资源管理等）
+- **总亮点数**：21 个
+- **核心技术亮点**：8 个（歌词系统、颜色提取、动画、音量过渡、内存优化等）
+- **工程化亮点**：5 个（Axios 封装、配置化渲染、资源管理等）
 - **交互体验亮点**：5 个（快捷键、搜索高亮、图片防闪烁等）
-- **架构设计亮点**：4 个（Teleport、路由追踪、事件总线等）
+- **架构设计亮点**：3 个（Teleport、路由追踪、右键菜单等）
+
+---
+
+## ✨ 简历项目亮点（精简版）
+
+以下四点为简历中可直接使用的项目亮点描述：
+
+---
+
+**1. 自研 LRC 歌词解析与播放系统**
+
+> 设计 LRC 歌词解析器，支持多时间标签、双语歌词智能匹配（±0.5s 容差）；采用**二分查找算法**（O(log n)）定位高亮歌词行；基于 **requestAnimationFrame** 实现与浏览器刷新同步的时间追踪，配合 **GSAP** 实现歌词平滑滚动及用户滚动冲突检测。
+
+---
+
+**2. 动态主题视觉系统**
+
+> 构建动态主题视觉系统：使用 **ColorThief** 从专辑封面提取主色调，通过 RGB→HSL 颜色空间转换过滤低质量颜色，**贪心算法**选取色差最大的颜色组合；使用 **Canvas API** 将封面切割为 2×2 区块实现节奏感流动背景，**双缓冲渐变过渡**避免背景切换闪烁。
+
+---
+
+**3. 全局音频控制器架构**
+
+> 基于 Vue 3 的 `defineExpose` 机制，将播放器组件实例暴露并挂载至 `window.$audio` 实现全局访问；采用**方法劫持**增强原生 Audio API，无缝注入音量渐变逻辑实现淡入淡出效果；播放控制逻辑高度解耦，10+ 个模块共享同一实例。
+
+---
+
+**4. 组件休眠/唤醒机制**
+
+> 针对歌曲详情页，设计**休眠/唤醒机制**——通过全局状态拦截 `watch` 回调，页面不可见时降级为轻量渲染并销毁 GSAP 动画实例，打开时执行完整渲染并自动补偿；后台 CPU 占用从 ~15% 降至 <1%，兼顾视觉效果与系统性能。
 
 ---
 
 _文档生成时间：2025年12月31日_
-_最后更新：2026年1月3日 - 补充休眠机制、竞态条件处理，说明 onUnmounted 不适用于 CSS 隐藏组件_
+_最后更新：2026年1月23日 - 新增简历项目亮点精简版_

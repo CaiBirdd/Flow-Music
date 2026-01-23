@@ -258,6 +258,8 @@ onMounted(() => {
   audio.value!.pause = pause as any
 })
 
+//这里是清除歌词的destory，实际由于MusicDetail一直在，销毁不了
+//这里相当于为了代码规范写的
 onUnmounted(() => {
   // 1. 清理音量渐变定时器
   clearInterval(timer)

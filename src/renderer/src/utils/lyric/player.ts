@@ -42,13 +42,15 @@ export class LyricPlayer {
   }
 
   private initEvents(): void {
-    // 用户滚动检测
+    // 用户滚动检测 侦听滚轮事件 'wheel' passive:true是性能优化参数
     this.container.addEventListener('wheel', this.handleWheel, { passive: true })
 
-    // 点击歌词跳转（事件委托）
+    // 点击歌词跳转（事件委托）不给每一行歌词都绑定click，只给最外层的container绑
+    // 这样不管点到哪里，时间都会冒泡到container，在这统一处理
     this.container.addEventListener('click', this.handleClick)
   }
   //注意这里的箭头函数 this指向的LyricPlayer 实例 箭头函数指向定义时的外层
+  //原因是handleWheel是作为回调传给addEventListener，如果携程普通函数，this指向可能会丢失或者指向DOM元素
   //普通函数是谁调用我，我就指向谁
   //防抖逻辑
   private handleWheel = (): void => {
@@ -62,16 +64,19 @@ export class LyricPlayer {
   }
   //点击歌词跳转
   private handleClick = (e: MouseEvent): void => {
+    //获取点击的位置，可能是lyric-text div也可能是lyric-translation div
     const target = e.target as HTMLElement
-    // 向上寻找最近的歌词行元素 (事件委托的核心)
+    //从点击的元素开始往上找，冒泡向上寻找最近的歌词行元素 lyric-line
     const lineEl = target.closest('.lyric-line') as HTMLElement
     //如果没点到歌词行，或者这是纯文本歌词，就直接返回
     if (!lineEl || this.noTimestamp) return
 
-    // 从 DOM 属性中读出这一行对应的索引
+    // 从 DOM 属性中读出这一行对应的索引 dataset 里的都是字符串，要转成数字
     const index = parseInt(lineEl.dataset.index || '0', 10)
+    // 从歌词数组中拿到这一行对应的时间
     if (index >= 0 && index < this.lyrics.length) {
       const time = this.lyrics[index].time
+      //在MusicPlayer组件中，外面写了一个回调函数传了进来，作用是将点击行的时间赋值给currentTime
       this.onLineClick?.(time, index)
     }
   }
@@ -102,6 +107,8 @@ export class LyricPlayer {
       return
     }
     // 创建文档片段 (DocumentFragment) —— 性能优化关键！
+    // 这是一个内存中的"虚拟DOM容器"，如果有100行歌词，一行行append，浏览器会重绘100次，很卡
+    // 用fragment，先把这100行贴到它身上，最后一次性把fragment贴到container，只重绘1次
     const fragment = document.createDocumentFragment()
     this.lineElements = [] // 重置缓存数组
 
@@ -133,9 +140,10 @@ export class LyricPlayer {
       if (this.noTimestamp) {
         div.classList.add('no-timestamp')
       }
-      // 存入缓存数组，方便后续快速访问
+      // 把刚create出来的div存入缓存数组，方便后续快速访问
+      // 比如要高亮第 5 行时，直接 this.lineElements[5] 就拿到了，不需要再去 document.querySelector，速度极快
       this.lineElements.push(div)
-      // 加入片段
+      // 把这个div挂到fragment上
       fragment.appendChild(div)
     }
 
@@ -144,7 +152,8 @@ export class LyricPlayer {
     bottomSpacer.className = 'lyric-spacer'
     bottomSpacer.style.height = '45%'
     fragment.appendChild(bottomSpacer)
-    //一次性加到DOM树 前面都是fragment上操作
+
+    //一次性加到DOM树 前面都是fragment上操作。浏览器只重绘一次
     this.container.innerHTML = ''
     this.container.appendChild(fragment)
   }
@@ -168,12 +177,14 @@ export class LyricPlayer {
 
     // 二分查找
     while (left <= right) {
+      //Math.floor是向下取整
       const mid = Math.floor((left + right) / 2)
-      const midTime = this.lyrics[mid].time
+      const midTime = this.lyrics[mid].time //取出这行的时间
       // 获取下一行的时间（如果是最后一行，下一行时间就是无穷大）
       const nextTime = mid < this.lyrics.length - 1 ? this.lyrics[mid + 1].time : Infinity
 
-      // 命中条件：时间落在这个区间 [当前行时间, 下一行时间)
+      // 命中条件：时间落在这个区间 [当前行时间, 下一行时间) 传入time和[midTime,nextIme)比
+      // 普通二分查找是精确匹配，歌词这里是区间匹配
       // 例如：当前行是 10秒，下一行是 15秒。如果 time 是 12秒，那就是这一行！
       if (time >= midTime && time < nextTime) {
         return mid
@@ -187,22 +198,23 @@ export class LyricPlayer {
       }
     }
     //程序的真实逻辑主要依靠 return mid 结束，这里基本没用
+    //处理跑完了没找到的情况，返回左指针
     return left
   }
 
   /**
-   * 更新当前行高亮和滚动
+   * 更新当前行高亮和调用滚动函数
    * @param index 目标行号
    * @param force 是否强制更新（比如用于用户拖动进度条后，强行纠正位置）
    */
   private updateLine(index: number, force: boolean = false): void {
-    //性能优化：如果行号没变，就不操作 DOM
+    //性能优化：如果目标行号和当前行号一样，就不操作 DOM
     if (index === this.currentIndex && !force) return
     // 防止索引越界
     if (index < 0 || index >= this.lineElements.length) return
 
-    // 移除旧的高亮
-    // this.currentIndex 记录着上一秒高亮的是哪一行
+    // 移除旧的高亮 如果是最开始currentIndex=-1跳过这了
+    // this.currentIndex 此时还存着“上一行”的索引
     if (this.currentIndex >= 0 && this.currentIndex < this.lineElements.length) {
       this.lineElements[this.currentIndex].classList.remove('active')
     }
@@ -215,7 +227,7 @@ export class LyricPlayer {
     this.scrollToLine(index, force)
 
     // 对外广播：告诉外部组件“现在唱到第几行了”
-    // 外部组件可能需要这个信息来更新一些 UI
+    // 外部组件可能需要这个信息来更新一些 UI 目前没用到
     this.onLineChange?.(index)
   }
 
@@ -230,6 +242,7 @@ export class LyricPlayer {
     //安全检查
     if (!this.lineElements[index]) return
 
+    //拿到lineElements数组中的div 也就是DOM元素，上面render()刚存入的，不用querySelector了
     const lineEl = this.lineElements[index]
     const containerHeight = this.container.clientHeight // 容器视口高度
     const lineTop = lineEl.offsetTop // 这一行距离内容顶部的距离
@@ -240,7 +253,7 @@ export class LyricPlayer {
 
     //执行滚动
     if (immediate) {
-      //立马滚动 刚加载完或者用户点击跳转时
+      //立马滚动 刚加载完或者用户点击跳转时 scrollTop: 容器滚动条滚下去的距离 可读写
       this.container.scrollTop = targetScroll
     } else {
       //使用 GSAP 动画库进行平滑滚动
@@ -254,22 +267,24 @@ export class LyricPlayer {
 
   /**
    * 时间同步循环
-   * 作用：每一帧都检查一下当前播放到哪了，需不需要换行
+   * 作用：每一帧（约16ms）检查当前播放时间和歌词进度
    */
   private timeLoop = (): void => {
-    //如果暂停了，或者这首歌没有时间轴（纯文本），就停止空转
+    //如果暂停了，或者这首歌没有歌词，就停止空转
     if (!this.isPlaying || this.noTimestamp) return
     //获取当前播放时间
     const currentTime = this.audio.currentTime
     //二分查找算出当前时间对应行的index
     const index = this.findCurrentLine(currentTime)
     // 状态变更检测：
-    // 只有当计算出的行号和当前不一样时，才执行更新操作
+    // 二分查找算出来的这句index 和现在正在高亮的currentIndex一样吗 一样说明这16ms还没唱完，什么都不做，只有不一样时才去操作DOM
     // 这是一个极其重要的优化，避免每一帧都去操作 DOM (updateLine)
     if (index !== this.currentIndex) {
       this.updateLine(index)
     }
-    // 请求浏览器在下一帧（约16ms后）再次执行 timeLoop
+    // 请求浏览器在下一帧（约16ms后）再次执行 timeLoop  不是递归哦
+    //当前执行栈：timeLoop 运行完这一帧的逻辑后，函数就正常结束了，栈帧弹出，内存清空
+    //下一帧：过了约 16ms，浏览器发出信号，JS 引擎从事件队列里拿出预约好的 timeLoop，再次压入栈运行
     this.rafId = requestAnimationFrame(this.timeLoop)
   }
   /**

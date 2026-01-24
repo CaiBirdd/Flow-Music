@@ -185,6 +185,7 @@ export function rgbToHsl(r: number, g: number, b: number) {
   const min = Math.min(rNorm, gNorm, bNorm)
   let h = 0
   let s = 0
+  //算亮度
   const l = (max + min) / 2
   //以下是计算色相、饱和度、亮度的标准转换公式
   if (max !== min) {
@@ -231,42 +232,67 @@ export function findBestColors(
   colors: Array<[number, number, number]>,
   num: number
 ): Array<[number, number, number]> {
-  // 先过滤出“好颜色”
+  // 1. 过滤：先只选“好颜色”
   let goodColors = colors.filter((color) => isGoodColor(...color))
+
+  // 2. 兜底：如果好颜色不够，用坏颜色补齐
   if (goodColors.length < num) {
-    // 如果好颜色不够凑数，就拿“坏颜色”来补
     const badColors = colors.filter((color) => !isGoodColor(...color))
     goodColors = [...goodColors, ...badColors.slice(0, num - goodColors.length)]
   }
 
-  const bestColors: Array<[number, number, number]> = []
-  //贪心算法选择颜色：每次选一个跟已选颜色差别最大的
-  for (let i = 0; i < num; i++) {
-    let bestColor: [number, number, number] | undefined
-    let maxDifference = 0
-    for (let j = 0; j < goodColors.length; j++) {
-      const color = goodColors[j]
-      const minDifference = bestColors.reduce((min, colorItem) => {
-        const hsl1 = rgbToHsl(...colorItem)
-        const hsl2 = rgbToHsl(...color)
-        // 核心逻辑：这里只计算了饱和度(S)和亮度(L)的差异，有意忽略了色相(H)
-        // 这样选出来的颜色虽然色相接近（同色系），但明暗和浓淡反差大，最适合做渐变背景
-        const difference = Math.abs(hsl1[1] - hsl2[1]) + Math.abs(hsl1[2] - hsl2[2])
-        return Math.min(min, difference)
+  // 3. 预处理 (性能优化)：
+  // 预先计算所有候选颜色的 HSL，避免在循环中重复计算 (O(N) -> O(1))
+  const candidates = goodColors.map((rgb) => ({
+    rgb,
+    hsl: rgbToHsl(...rgb)
+  }))
+  console.log(candidates, '挑出来的好颜色，转成hsl了')
+
+  // 4. 初始化：
+  // 直接选取第一个候选项（ColorThief 返回的第一个通常是主色调/权重最高的）
+  // 这样省去了第一轮无效的比较循环
+  const first = candidates.shift()
+  if (!first) return []
+
+  const bestColors = [first]
+
+  // 5. 贪心选择 (Maximin 策略)：
+  // 已经有了 1 个，还需要选 num - 1 个
+  for (let i = 1; i < num; i++) {
+    let bestCandidate: typeof first | undefined
+    let maxMinDist = 0
+
+    // 遍历剩余的候选者
+    for (const candidate of candidates) {
+      // 计算当前候选者与“已选组合”的最小距离 (这里用 reduce 寻找最近邻居)
+      const minDist = bestColors.reduce((min, selected) => {
+        // 只计算 Saturation 和 Lightness 的差异 (忽略 Hue)
+        const dist =
+          Math.abs(selected.hsl[1] - candidate.hsl[1]) +
+          Math.abs(selected.hsl[2] - candidate.hsl[2])
+        return Math.min(min, dist)
       }, Infinity)
-      if (minDifference > maxDifference) {
-        maxDifference = minDifference
-        bestColor = color
+
+      // 如果这个候选者离大家最远（最独特），暂定为最佳人选
+      if (minDist > maxMinDist) {
+        maxMinDist = minDist
+        bestCandidate = candidate
       }
     }
-    if (bestColor) {
-      bestColors.push(bestColor)
-      const index = goodColors.indexOf(bestColor)
-      goodColors.splice(index, 1)
+
+    // 将这一轮的最佳人选加入已选列表，并从候选池移除
+    if (bestCandidate) {
+      bestColors.push(bestCandidate)
+      const index = candidates.indexOf(bestCandidate)
+      if (index > -1) {
+        candidates.splice(index, 1)
+      }
     }
   }
 
-  return bestColors
+  // 最后只需返回原始的 rgb 数据
+  return bestColors.map((c) => c.rgb)
 }
 
 // ==================== Electron 环境判断 ====================

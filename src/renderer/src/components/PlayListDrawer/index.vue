@@ -1,42 +1,28 @@
 ﻿<script setup lang="ts">
 import SongList from '@/components/SongList/index.vue'
-import { computed } from 'vue'
+import { useFlags } from '@/store/flags'
 import { columns } from '@/components/PlayListDrawer/config'
-import { playListState } from '@/layout/BaseAside/usePlayList'
 import { useMusicAction } from '@/store/music'
 
-interface Props {
-  modelValue: boolean
-}
-const props = defineProps<Props>()
-const emit = defineEmits(['update:modelValue'])
+const flags = useFlags()
 const music = useMusicAction()
-
-const setModelValue = computed({
-  get() {
-    return props.modelValue
-  },
-  set(val) {
-    emit('update:modelValue', val)
-  }
-})
 </script>
 
 <template>
-  <div :class="['drawer', { 'open-drawer': setModelValue }]" @click.stop>
+  <div :class="['drawer', { 'open-drawer': flags.isOpenDrawer }]" @click.stop>
     <div class="head">
       <div class="left">
         <span class="text">播放列表</span>
-        <span class="count">{{ music.state.runtimeIds.length }}</span>
+        <span class="count">{{ music.state.playQueueIds.length }}</span>
       </div>
     </div>
     <SongList
       :columns="columns as any"
-      :loading="playListState.loading"
-      :songs="music.state.songs as any"
-      :ids="music.state.runtimeIds"
-      :list="music.state.runtimeList?.tracks || []"
-      :list-info="music.state.runtimeList"
+      :loading="false"
+      :current-song="music.state.currentSong as any"
+      :ids="music.state.playQueueIds"
+      :list="music.state.playQueue?.tracks || []"
+      :list-info="music.state.playQueue"
       :lazy="true"
       :is-need-title="false"
       :scroll="true"
@@ -51,7 +37,6 @@ const setModelValue = computed({
   z-index: 2001;
   height: calc(100% - 200px);
   width: 400px;
-  //background: transparent;
   color: #fff;
   background-color: rgba(40, 40, 40, 0.7);
   right: 0;
@@ -59,9 +44,19 @@ const setModelValue = computed({
   border-radius: 15px 0 0 15px;
   box-shadow: 0 5px 15px 5px rgba(0, 0, 0, 0.3);
   transform: translateX(120%);
-  transition: 0.4s;
+  /* 优化: 仅对transform使用过渡 */
+  transition: transform 0.4s ease-out;
   overflow: hidden;
-  backdrop-filter: blur(60px) saturate(210%);
+  /*
+   * backdrop-filter 性能优化:
+   * 1. 降低blur值从60px到40px
+   * 2. 使用will-change和GPU加速
+   * 3. contain限制重绘范围
+   */
+  backdrop-filter: blur(40px) saturate(180%);
+  will-change: transform, backdrop-filter;
+  backface-visibility: hidden;
+  contain: layout style;
   .head {
     height: 60px;
     width: 100%;

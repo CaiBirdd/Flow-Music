@@ -1,17 +1,18 @@
-import { convertToProxyUrl, formattingTime } from '@/utils'
+import { formattingTime } from '@/utils'
 import { GetMusicDetailData, getMusicUrl } from '@/api/musicList'
 import { Columns } from '@/components/SongList/index.vue'
 import { Bottom } from '@element-plus/icons-vue'
-import NotFund from '@/components/NotFund/index.vue'
 import { computed, ref, ComputedRef } from 'vue'
 import { useUserInfo } from '@/store'
 
-const downloadVisible = ref<Record<number, boolean>>({})
+/**
+ * 下载弹窗状态
+ * 内存优化: 只保存当前正在处理的下载ID，避免状态累积
+ */
+const downloadVisible = ref<number | null>(null)
 const store = useUserInfo()
-// 原代码: export const columns: Columns[] = computed(() => {
-export const columns: ComputedRef<Columns[]> = computed(() => {
-  console.log('store.isLogin', store.isLogin)
 
+export const columns: ComputedRef<Columns[]> = computed(() => {
   return [
     {
       title: '#',
@@ -65,26 +66,26 @@ export const columns: ComputedRef<Columns[]> = computed(() => {
             async onClick() {
               const { data } = await getMusicUrl(id)
               if (!data[0].url) {
-                downloadVisible.value[id] = true
+                downloadVisible.value = id
                 return
               }
-              const url = convertToProxyUrl(data[0].url)
+              const url = data[0].url
 
               fetch(url)
                 .then((response) => response.blob())
                 .then((blob) => {
                   const link = document.createElement('a')
-                  link.href = URL.createObjectURL(blob)
+                  // 创建 Blob URL
+                  const blobUrl = URL.createObjectURL(blob)
+                  link.href = blobUrl
                   link.download = name + '.mp3'
-                  link.target = '_blank' // 可选，如果希望在新窗口中下载文件，请取消注释此行
                   link.click()
+                  // 内存优化: 下载完成后释放 Blob URL，防止内存泄漏
+                  // 使用 setTimeout 确保下载开始后再释放
+                  setTimeout(() => {
+                    URL.revokeObjectURL(blobUrl)
+                  }, 1000)
                 })
-            }
-          }),
-          h(NotFund, {
-            modelValue: !!downloadVisible.value[id],
-            'onUpdate:modelValue': (val) => {
-              downloadVisible.value[id] = val
             }
           })
         ])
@@ -117,42 +118,3 @@ export const columns: ComputedRef<Columns[]> = computed(() => {
     }
   ]
 })
-
-export const tabsConfig = [
-  {
-    name: 'song',
-    label: '单曲'
-  },
-  {
-    name: 'singer',
-    label: '歌手'
-  },
-  {
-    name: 'album',
-    label: '专辑'
-  },
-  {
-    name: 'video',
-    label: '视频'
-  },
-  {
-    name: 'songList',
-    label: '歌单'
-  },
-  {
-    name: 'lyric',
-    label: '歌词'
-  },
-  {
-    name: 'podcast',
-    label: '播客'
-  },
-  {
-    name: 'voice',
-    label: '声音'
-  },
-  {
-    name: 'user',
-    label: '用户'
-  }
-]

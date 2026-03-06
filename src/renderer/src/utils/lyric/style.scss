@@ -1,0 +1,146 @@
+/**
+ * 歌词播放器样式
+ */
+
+/**
+ * 歌词容器：负责滚动区域和遮罩效果
+ */
+.lyric-container {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: auto;
+
+  // 隐藏滚动条但保留滚动功能
+  &::-webkit-scrollbar {
+    width: 0;
+    display: none;
+  }
+
+  // 顶部和底部渐变遮罩，营造聚焦中心行的视觉效果
+  /* 
+       * 写两个是为了浏览器兼容
+       * 上下各保留 12% 的透明渐变，让歌词滚动时有"消失在虚空中"的感觉
+       * to bottom 方向：从上往下画 
+         transparent  0% 处：完全透明 (歌词看不见)
+         black 12% 12% 处：全黑/完全不透明 (歌词完全显示)
+         black 88% 88% 处：全黑/完全不透明 (歌词完全显示)
+         transparent 100% 处：完全透明 (歌词看不见) 
+      */
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 1) 12%,
+    rgba(0, 0, 0, 1) 88%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 1) 12%,
+    rgba(0, 0, 0, 1) 88%,
+    transparent 100%
+  );
+}
+
+/**
+ * 占位元素：用于将首尾歌词滚动到容器中心位置
+ */
+.lyric-spacer {
+  pointer-events: none;
+}
+
+/**
+ * 歌词行：单行歌词的容器，包含原文和翻译（如有）
+ */
+.lyric-line {
+  padding: 14px 16px; // 减小左右内边距，给文字更多空间
+  font-size: 26px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.35);
+  line-height: 1.6;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.33, 0, 0.67, 1); // ≈ GSAP 的 power2.out
+  // 性能优化：提示浏览器提前优化渲染层
+  will-change: transform, filter;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 8px;
+  margin: 2px 0;
+  // 默认带一点模糊
+  filter: blur(0.8px);
+
+  // 原文歌词文本
+  .lyric-text {
+    display: -webkit-box;
+    -webkit-line-clamp: none;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  // 翻译歌词文本（中文翻译）
+  .lyric-translation {
+    font-size: 18px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.25);
+    //margin-top: -3px; 调整翻译行与原文行的间距
+    line-height: 1.5;
+    transition: all 0.4s cubic-bezier(0.33, 0, 0.67, 1);
+    letter-spacing: 0.8px;
+  }
+
+  // 鼠标悬停状态：提升亮度和添加背景
+  &:hover {
+    color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.05);
+    filter: blur(0);
+
+    .lyric-translation {
+      color: rgba(255, 255, 255, 0.4);
+      filter: blur(0);
+    }
+  }
+
+  // 当前播放行高亮状态
+  &.active {
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
+
+    filter: blur(0); // 高亮时清晰
+    transform: scale(1.02); // 配合放大
+    transform-origin: left center; // 左对齐放大
+
+    .lyric-text {
+      -webkit-line-clamp: none;
+    }
+
+    .lyric-translation {
+      color: rgba(255, 255, 255, 0.95);
+      text-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  // 无时间戳歌词：禁用点击交互效果
+  &.no-timestamp {
+    cursor: default;
+
+    &:hover {
+      background: transparent;
+    }
+  }
+}
+
+/**
+ * 空歌词占位符：当没有歌词时显示的提示文本
+ */
+.lyric-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.4);
+}

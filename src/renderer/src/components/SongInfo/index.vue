@@ -1,53 +1,54 @@
-﻿<!-- 显示当前播放项（歌单/专辑）的信息卡片，
+﻿<!-- 显示当前歌单的信息卡片，
  包括封面背景、播放量、名称、作者、创建时间、简介和若干操作按钮（播放全部、收藏、下载全部） -->
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { formatDate, formatNumberToMillion, toggleImg } from '@/utils'
 import { useMusicAction } from '@/store/music'
-import { ref, watch } from 'vue'
+import { watch, useTemplateRef } from 'vue'
 import { useTheme } from '@/store/theme'
 
 const music = useMusicAction()
-
-const left = ref<HTMLDivElement>()
+const left = useTemplateRef<HTMLDivElement>('left')
 const theme = useTheme()
 const router = useRouter()
 
+//监听歌单封面图的变化，动态设置背景色
 watch(
-  () => music.state.currentItem?.coverImgUrl,
+  () => music.state.viewingPlaylist?.coverImgUrl,
   (val) => {
     if (val) {
       toggleImg(val, '350y350').then((img) => {
         if (left.value) {
-          left.value!.style.backgroundImage = `url(${img.src})`
+          //设置歌单封面
+          left.value.style.backgroundImage = `url(${img.src})`
         }
       })
-      // const src = music.state.currentItem.specialType === 5 ? '' : val
+      //设置背景色
       theme.change(val)
     }
   },
   {
-    immediate: true
+    immediate: true // 立即执行一次：防止进入页面时已经有数据但没触发监听
   }
 )
-
+// 跳转到用户详情页
 const gotoUserDetail = () => {
   router.push({
     path: '/user-detail',
     query: {
-      uid: music.state.currentItem?.userId
+      uid: music.state.viewingPlaylist?.userId
     }
   })
 }
-// playCount
 </script>
 
 <template>
-  <div v-if="music.state.currentItem?.coverImgUrl" class="list-info">
+  <!-- v-if: 如果没有封面图（说明数据还没加载好），整个头部都不显示 -->
+  <div v-if="music.state.viewingPlaylist?.coverImgUrl" class="list-info">
     <div>
       <div ref="left" class="left">
         <span class="count">
-          {{ formatNumberToMillion(music.state.currentItem?.playCount || 0) }}
+          {{ formatNumberToMillion(music.state.viewingPlaylist?.playCount || 0) }}
         </span>
       </div>
     </div>
@@ -55,43 +56,29 @@ const gotoUserDetail = () => {
     <div class="right">
       <div class="song-name">
         <div class="tag">歌单</div>
-        <div class="name">{{ music.state.currentItem?.name }}</div>
+        <div class="name">{{ music.state.viewingPlaylist?.name }}</div>
       </div>
       <div class="song-info">
         <div
-          :style="{ backgroundImage: `url(${music.state.currentItem?.creator?.avatarUrl})` }"
+          :style="{ backgroundImage: `url(${music.state.viewingPlaylist?.creator?.avatarUrl})` }"
           class="avatar"
         ></div>
         <div class="nickname" @click="gotoUserDetail">
-          {{ music.state.currentItem?.creator?.nickname }}
+          {{ music.state.viewingPlaylist?.creator?.nickname }}
         </div>
         <div class="create-timer">
-          {{ formatDate(music.state.currentItem?.createTime || 0, 'YY-MM-DD hh:mm:ss') }}创建
+          {{ formatDate(music.state.viewingPlaylist?.createTime || 0, 'YY-MM-DD hh:mm:ss') }}创建
         </div>
       </div>
-      <span v-if="(music.state.currentItem as any)?.description" class="text-info-desc">
-        {{ (music.state.currentItem as any)?.description }}
+      <span v-if="(music.state.viewingPlaylist as any)?.description" class="text-info-desc">
+        {{ (music.state.viewingPlaylist as any)?.description }}
       </span>
 
       <div class="song-handle">
         <v-btn variant="tonal" rounded="lg">播放全部</v-btn>
         <v-btn variant="tonal" rounded="lg">收藏</v-btn>
         <v-btn variant="tonal" rounded="lg">下载全部</v-btn>
-        <!--        <BaseButton type="subject">播放全部</BaseButton>-->
-        <!--        <BaseButton>收藏</BaseButton>-->
-        <!--        <BaseButton>分享</BaseButton>-->
-        <!--        <BaseButton>下载全部</BaseButton>-->
       </div>
-      <!--      <div class="song-count">-->
-      <!--        <div class="p1">-->
-      <!--          <span>歌曲 : </span>-->
-      <!--          <span class="total">{{ music.currentItem.trackCount }}</span>-->
-      <!--        </div>-->
-      <!--        <div class="p2">-->
-      <!--          <span>播放 : </span>-->
-      <!--          <span class="count">{{ music.currentItem.playCount }}</span>-->
-      <!--        </div>-->
-      <!--      </div>-->
     </div>
   </div>
 </template>
@@ -102,7 +89,6 @@ const gotoUserDetail = () => {
   padding: 0 35px;
 
   .left {
-    //background-image: url("https://p1.music.126.net/9GAbSb_hlXPu66HWInJOww==/109951162846052486.jpg");
     @extend .bgSetting;
     width: 220px;
     height: 220px;
@@ -145,14 +131,14 @@ const gotoUserDetail = () => {
         color: $subject;
         border: 1px solid $subject;
         & + & {
-          margin-left: 5px;
+          margin-left: 5px; // 如果有多个 tag，之间加间距
         }
       }
     }
     .song-info {
       font-size: 12px;
       * + * {
-        margin-left: 8px;
+        margin-left: 8px; // 相邻兄弟选择器：给除了第一个元素外的所有子元素加左边距
       }
       .avatar {
         border-radius: 50%;

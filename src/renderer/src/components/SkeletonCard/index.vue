@@ -5,7 +5,7 @@ import { ref } from 'vue'
 interface Props {
   loading: boolean
 }
-const props = defineProps<Props>()
+defineProps<Props>()
 const cards = ref([
   {
     title: 'Homemade Dulce de Leche Ice Cream with Chocolate Chips',

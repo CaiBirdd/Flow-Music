@@ -4,14 +4,11 @@ import { Profile } from '@/api/user'
 interface Props {
   userInfo: Profile
   identify: {
-    actionUrl?: string // 请求网易云音乐的链接
-    imageDesc?: string // 标签
-    imageUrl?: string // 标签图片
     level: number
   }
   location: string
 }
-const props = defineProps<Props>()
+defineProps<Props>()
 </script>
 
 <template>
@@ -22,12 +19,7 @@ const props = defineProps<Props>()
         <div class="vip-info">
           <h2 class="top">{{ userInfo.nickname }}</h2>
           <div class="vip">
-            <div>陆.</div>
             <div class="tag-info">
-              <div class="tag">
-                <img :src="identify.imageUrl" />
-                {{ identify.imageDesc }}
-              </div>
               <div class="rank">Lv{{ identify.level }}</div>
             </div>
           </div>
@@ -36,11 +28,7 @@ const props = defineProps<Props>()
           <v-btn variant="tonal" rounded="lg">歌手页</v-btn>
           <v-btn variant="tonal" rounded="lg">发私信</v-btn>
           <v-btn variant="tonal" rounded="lg">已关注</v-btn>
-          <!--          <BaseButton>歌手页</BaseButton>-->
-          <!--          <BaseButton>发私信</BaseButton>-->
-          <!--          <BaseButton>已关注</BaseButton>-->
         </div>
-        <div class="line"></div>
       </div>
       <div class="bottom-container">
         <div class="info-count">
@@ -117,15 +105,7 @@ const props = defineProps<Props>()
       padding-bottom: 15px;
       position: relative;
       margin-bottom: 20px;
-      .line {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 1px;
-        border-radius: 1px;
-        background-color: rgba(255, 255, 255, 0.12);
-      }
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12); // 使用 border-bottom 替代 .line
       .vip-info {
         display: flex;
         justify-content: space-between;
@@ -137,20 +117,6 @@ const props = defineProps<Props>()
           .tag-info {
             display: flex;
             align-items: center;
-            .tag {
-              background-color: rgb(253, 228, 226);
-              border-radius: 10px;
-              position: relative;
-              display: flex;
-              align-items: center;
-              font-size: 12px;
-              color: $subject;
-              padding-right: 10px;
-              img {
-                width: 16px;
-                margin-right: 3px;
-              }
-            }
             .rank {
               margin-left: 5px;
               background-color: rgb(240, 240, 240);

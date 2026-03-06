@@ -2,136 +2,101 @@
 功能概述: 应用左侧侧边栏组件，渲染用户头像、用户歌单与侧边导航菜单，支持折叠子列表、右键上下文菜单、
 创建歌单对话框与路由跳转（选择歌单/菜单项切换页面并携带 query id）。-->
 <script setup lang="ts" name="BaseAside">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
+import { ListItem, needUseComparisonPaths } from '@/layout/BaseAside/config'
 import { useUserInfo } from '@/store'
+import { useMusicAction } from '@/store/music'
+import { useFlags } from '@/store/flags'
 import { useRoute, useRouter } from 'vue-router'
-import { ListItem, needUseComparisonPaths, paths } from '@/layout/BaseAside/config'
-import {
-  afterEnter,
-  afterLeave,
-  beforeEnter,
-  beforeLeave,
-  enter,
-  leave
-} from '@/layout/BaseAside/animation'
+
 import ContextMenu from '@/components/ContextMenu/index.vue'
-import SongListCreator from '../../components/SongListCreator.vue'
-import { deletePlay } from '../../api/play'
+import SongListCreator from '../../components/SongListCreator/index.vue'
+import { deletePlaylist } from '@/api/playlist'
+import { getPlayListDetail, QueuePlaylist } from '@/api/musicList'
 import { getUserPlayListFn } from '../../utils/userInfo'
 import { ElMessage } from 'element-plus'
 import Item from './item.vue'
 
 const store = useUserInfo()
-const current = ref<ListItem>()
-
+const musicStore = useMusicAction()
+const flags = useFlags()
 const router = useRouter()
 const route = useRoute()
 
 // 添加右键菜单配置
 const playlistMenuItems = [
-  { label: '删除此列表', value: 'delete' },
-  { label: '编辑歌单', value: 'edit' }
+  { label: '播放', value: 'play' },
+  { label: '删除此列表', value: 'delete' }
 ]
-
+//删除歌单操作
 const deletePlayHandler = async (item) => {
   try {
-    const res = await deletePlay([item.id])
+    await deletePlaylist([item.id])
     getUserPlayListFn()
     ElMessage.success('删除成功')
   } catch {
     ElMessage.error('删除失败')
   }
 }
+//右键菜单选择操作
 const handlePlaylistMenuSelect = (
   item: { label: string; value: string },
   playlistItem: ListItem
 ) => {
   switch (item.value) {
     case 'play':
-      // 播放该歌单
+      // 跳转到该歌单详情页
       itemClick(playlistItem)
+      // 将整个歌单加入播放队列并播放
+      playWholeList(playlistItem.id as number)
       break
     case 'delete':
       // 从播放列表移除
       deletePlayHandler(playlistItem)
       break
-    case 'edit':
-      // 编辑歌单
-      break
   }
 }
 
-const init = () => {
-  // 这里需要特殊处理的有 【创建的歌单】 和 【收藏的歌单】两个列表
-  if (route.query.id && route.path === '/play-list') {
-    current.value = {
-      id: +route.query.id,
-      path: '/play-list'
-    } as ListItem
-    // console.log('current-->', current)
+//播放整个歌单的逻辑
+const playWholeList = async (id: number) => {
+  //获取歌单详情（包含 trackIds 和 完整的 tracks）
+  const { playlist } = await getPlayListDetail(id)
+  //构造播放队列对象
+  const list = {
+    id: playlist.id,
+    tracks: playlist.tracks
+  }
+  //更新全局播放队列
+  musicStore.updatePlayQueue(
+    list as QueuePlaylist,
+    playlist.tracks.map((item) => item.id)
+  )
+  //立即播放第一首歌曲
+  if (playlist.tracks.length > 0) {
+    musicStore.getMusicUrlHandler(playlist.tracks[0])
   }
 }
-watch(
-  () => store.userPlayListInfo,
-  () => {
-    const path = route.path
-    if (needUseComparisonPaths.includes(path)) {
-      current.value = {
-        path
-      } as ListItem
-      return
-    }
-    if (route.query.id) {
-      const id = +route.query.id
-      current.value = store.userPlayListInfo.find((item) => item.id === id) as ListItem
-    }
-    paths.includes(path) || (current.value = undefined)
-  }
-)
+// 菜单项点击事件
 const itemClick = (item: ListItem) => {
-  // current在这里为上一次
-  // 有id说明获取的是歌单
-  if (item.id && item.id !== current.value?.id) {
-    // 不在使用左侧菜单点击获取，仅传参
-    // getPlayListDetailFn(item.id)
-    // 防止上一次current没有id导致下面判断path出问题
-    current.value?.id && (current.value = item)
-  }
-  // if(item.path === current.value?.path) {
-  //   return
-  // }
+  // 极简实现：不管那么多，直接告诉路由我要去哪
   router.push({
     path: item.path,
     query: {
       id: item.id
     }
   })
-  current.value = item
-}
-watch(
-  () => route.fullPath,
-  () => {
-    if (route.path === '/play-list') {
-      init()
-    }
-  }
-)
-watch(current, (value) => {
-  if (value && value.coverImgUrl) {
-    //
-  }
-})
-// 列表选中条件，有id优先id，没有id用path
-const isCurrent = (path: string, id?: number) => {
-  if (!current.value) {
-    return false
-  }
-  if (needUseComparisonPaths.includes(path)) {
-    return current.value.path === path
-  }
-  return current.value.id === id
 }
 
+//判断当前菜单项是否应该高亮
+const isCurrent = (path: string, id?: number) => {
+  //路径匹配 这里是不需要id的'/home', '/lately', '/cloud'
+  if (needUseComparisonPaths.includes(path)) {
+    return route.path === path
+  }
+  //'/play-list'其实就是歌单项 路径和菜单都对才可以
+  return route.path === path && Number(route.query.id) === id
+}
+//跳转到用户详情页
 const gotoDetail = () => {
   router.push({
     path: '/user-detail',
@@ -140,13 +105,15 @@ const gotoDetail = () => {
     }
   })
 }
-
+//点击未登录头像 触发登录弹窗
 const login = () => {
-  window.$login.show()
+  flags.isOpenLogin = true
 }
+// 点击折叠/展开按钮 -> 切换 Store 状态
 const collapsedHandler = (item) => {
-  item.isCollapsed = !item.isCollapsed
+  store.toggleCollapse(item.mark)
 }
+// 创建歌单弹窗控制
 const dialog = ref(false)
 const openDialog = () => {
   dialog.value = true
@@ -156,6 +123,7 @@ const openDialog = () => {
 <template>
   <SongListCreator v-model="dialog" />
   <div class="aside">
+    <!-- 头部：用户头像区域 -->
     <div class="avatar-box">
       <template v-if="store.isLogin">
         <div
@@ -170,50 +138,53 @@ const openDialog = () => {
         <span>未登录</span>
       </div>
     </div>
+    <!-- 主体：可滚动的菜单列表区域 -->
     <div class="play-container">
       <template v-for="(menuItem, i) in store.asideMenuConfig" :key="i">
+        <!-- 每个 menuItem 代表一个大区块（如“创建的歌单”、“收藏的歌单”） -->
         <div
           v-if="menuItem.show"
           :class="['lump', { 'collapsed-lump': menuItem.type === 'collapsed' }]"
         >
-          <div v-if="menuItem.title && menuItem.list.length" class="title">
-            <span @click="menuItem.type === 'collapsed' && collapsedHandler(menuItem)">{{
-              menuItem.title
-            }}</span>
-            <v-icon class="plus" icon="mdi-plus" @click="openDialog" />
+          <!-- 区块标题栏 有折叠类型才能触发折叠函数 这里title只针对创建的歌单和收藏的歌单-->
+          <div
+            v-if="menuItem.title"
+            class="title"
+            @click="menuItem.type === 'collapsed' && collapsedHandler(menuItem)"
+          >
+            <span>{{ menuItem.title }}</span>
+            <v-icon class="plus" icon="mdi-plus" @click.stop="openDialog" />
           </div>
+          <!-- 分支 A：可折叠类型的区块 创建的歌单和收藏的歌单 -->
           <template v-if="menuItem.type === 'collapsed'">
-            <transition
-              name="height-fade"
-              @before-enter="beforeEnter"
-              @enter="enter"
-              @after-enter="afterEnter"
-              @before-leave="beforeLeave"
-              @leave="leave"
-              @after-leave="afterLeave"
+            <!-- 
+               重构注：直接根据 store中collapsedState 来判断 
+               逻辑：store里有记录 ??就用store中的，没有就用配置中的
+            -->
+            <div
+              class="collapse-wrapper"
+              :class="{
+                expanded: store.collapsedState[menuItem.mark as string] ?? menuItem.isCollapsed
+              }"
             >
-              <div
-                v-show="menuItem.isCollapsed"
-                :class="[
-                  {
-                    collapsed: menuItem.type === 'collapsed',
-                    'tree-open': menuItem.isCollapsed === true,
-                    'tree-close': menuItem.isCollapsed === false
-                  }
-                ]"
-              >
+              <div class="collapse-inner">
+                <!-- 遍历该区块下的所有子菜单项 (item) -->
                 <template v-for="item in menuItem.list" :key="item.id">
+                  <!-- 特殊处理：如果是“创建的歌单”(mark === 'play')，包裹右键菜单 -->
                   <ContextMenu
                     v-if="menuItem.mark === 'play'"
                     :items="playlistMenuItems"
                     @select="(menuItem) => handlePlaylistMenuSelect(menuItem, item)"
                   >
+                    <!-- 菜单项组件 -->
+                    <!-- :checked 绑定高亮状态 (Router 驱动) 这个是我创建的歌单-->
                     <Item
                       :item="item"
                       :checked="isCurrent(item.path, item.id)"
                       @click="itemClick"
                     />
                   </ContextMenu>
+                  <!-- 其他列表(收藏歌单），目前没加右键菜单 -->
                   <Item
                     v-else
                     :item="item"
@@ -222,8 +193,9 @@ const openDialog = () => {
                   />
                 </template>
               </div>
-            </transition>
+            </div>
           </template>
+          <!-- 分支 B：普通平铺区块（如“为我推荐”、“我的音乐”） -->
           <template v-else>
             <Item
               v-for="item in menuItem.list"
@@ -234,6 +206,7 @@ const openDialog = () => {
             />
           </template>
         </div>
+        <!-- 分割线：除了最后一个区块，每个区块下面画一条线 -->
         <div v-if="i < store.asideMenuConfig.length - 1 && menuItem.show" class="line"></div>
       </template>
     </div>
@@ -241,18 +214,26 @@ const openDialog = () => {
 </template>
 
 <style lang="scss" scoped>
-.height-fade-enter-active,
-.height-fade-leave-active {
-  overflow: hidden;
-  transition: height 0.3s ease;
-}
-.height-fade-enter, .height-fade-leave-to /* .height-fade-leave-active in <2.1.8 */ {
-  height: 0;
+/* 折叠动画的核心实现*/
+.collapse-wrapper {
+  display: grid;
+  grid-template-rows: 0fr; /* 默认状态：行高为 0 (收起) */
+  transition: grid-template-rows 0.3s ease; /* 300ms 平滑过渡 */
+  overflow: hidden; /* 隐藏超出部分 */
+  /* 展开状态 */
+  &.expanded {
+    grid-template-rows: 1fr; /* 展开：行高为 1fr (自适应内容高度) */
+  }
+  /* 内部容器：必须指定 min-height: 0 才能让 Grid 动画生效 */
+  .collapse-inner {
+    min-height: 0;
+  }
 }
 .aside {
   width: 235px;
-  height: 100%;
-  background-color: rgba(255, 255, 255, 0.03);
+  flex-shrink: 0; // 防止主内容区main挤压侧边栏aside
+  height: 100%; //占满父容器高度
+  background-color: rgba(255, 255, 255, 0.03); /* 极淡的半透明背景 */
   padding: 10px 0;
   box-sizing: border-box;
   position: relative;
@@ -269,7 +250,7 @@ const openDialog = () => {
       border-radius: 50%;
       width: 40px;
       height: 40px;
-      background: url('https://p1.music.126.net/siSjcSLr8ybRZ3VUpC-9hg==/109951165504329717.jpg');
+      background: url('https://p1.music.126.net/siSjcSLr8ybRZ3VUpC-9hg==/109951165504329717.jpg'); /* 默认头像背景图 (网易云 CDN) */
       background-size: contain;
       background-position: center;
       background-repeat: no-repeat;
@@ -295,40 +276,37 @@ const openDialog = () => {
       }
     }
     .nickname {
-      max-width: 140px;
-      @include textOverflow();
+      max-width: 140px; /* 限制最大宽度 */
+      @include textOverflow(); /* 引入 Mixin 实现省略号 (...) */
       font-size: 14px;
     }
   }
+  /* 菜单列表滚动容器 */
   .play-container {
-    overflow-y: auto;
-    height: calc(100% - 70px);
-    padding: 0 20px;
-    padding-bottom: 100px;
+    overflow-y: auto; /* 内容多了显示滚动条 */
+    scrollbar-gutter: stable; /* 核心：预留滚动条坑位 要不然会挤压里面的内容导致布局跳动*/
+    height: calc(100% - 70px); /* 减去头部高度 */
+    padding: 0 14px 0 20px; // 上0 右14 下0 左20（下padding后面单独覆盖了）
+    padding-bottom: 100px; /* 底部留白，防止最后一条被底部播放栏挡住 */
+    /* 可折叠区块样式 */
     .collapsed-lump {
+      /* 标题栏布局 */
       .title {
         display: flex;
-        justify-content: space-between;
+        justify-content: space-between; /* 两端对齐：文字在左，加号在右 */
         cursor: pointer;
       }
-      .collapsed {
-        overflow: hidden;
-      }
-      .tree-close {
-        //height: 0;
-      }
-      .tree-open {
-        //height: 100%;
-      }
     }
+    /* 普通区块样式 */
     .lump {
       .title {
         font-size: 14px;
-        color: $darkText;
+        color: $darkText; /* 使用全局变量颜色 */
         text-align: left;
         padding: 0 10px;
         margin-bottom: 5px;
         .plus {
+          /* 加号图标样式 */
           border-radius: 50%;
           width: 18px;
           font-size: 14px;
@@ -337,6 +315,7 @@ const openDialog = () => {
         }
       }
     }
+    /* 分割线样式 */
     .line {
       height: 1px;
       background-color: rgba(255, 255, 255, 0.1);

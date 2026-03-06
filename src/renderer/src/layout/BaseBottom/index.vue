@@ -1,7 +1,8 @@
 <script setup lang="ts" name="Bottom">
-// 使用 Record<string, never> 代替 {}，避免空对象类型接受数字/字符串等非 nullish 值触发 ESLint 报错
+// 这里定义了组件的插槽类型。
+// Record<string, never> 是比 {} 更严格的空对象类型，表示 props 不包含任何属性。
 defineSlots<{
-  //default?: (props: {}) => any
+  //定义了一个名为default的默认插槽
   default?: (props: Record<string, never>) => any
 }>()
 </script>
@@ -15,15 +16,14 @@ defineSlots<{
 <style lang="scss" scoped>
 .container {
   height: 75px;
-  //background-color: rgb(26,26,35);
   border-top: rgb(59, 59, 62) 1px solid;
   position: fixed;
   bottom: 0;
   left: 0;
-  z-index: 1999;
+  z-index: 1999; // 层级很高，确保显示在大部分内容之上（但通常低于弹窗/遮罩）
   width: 100%;
 }
 .bottom-container {
-  transition: 0.5s;
+  transition: 0.5s; //最开始进入底部组件不显示，播放后显示有动画效果
 }
 </style>

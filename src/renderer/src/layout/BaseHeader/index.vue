@@ -4,51 +4,65 @@ import { handle } from '@/layout/BaseHeader/handle'
 import { useFlags } from '@/store/flags'
 import { useRoute, useRouter } from 'vue-router'
 import { computed } from 'vue'
-import { isElectron } from '@/utils'
+import { isElectron } from '@/utils' // 引入工具函数，判断当前是否在 Electron 环境下运行（浏览器环境不显示窗口控制按钮）
 
 const flags = useFlags()
-const router = useRouter()
-const route = useRoute()
-const { maximize, unmaximize, minimize, close } = handle()
+const router = useRouter() //跳转操作
+const route = useRoute() //读取路由参数
+const { maximize, unmaximize, minimize, close } = handle() //解构出窗口控制方法
 
+//点击最大化/还原按钮时的切换逻辑
 const maximizeOrUnmaximize = () => {
+  // 如果当前已经是最大化状态，则执行还原；否则执行最大化
   flags.isMaximize ? unmaximize() : maximize()
 }
-
+//路由的后退
 const back = () => {
   if (backIsDisable.value) {
     return
   }
   router.back()
 }
+//路由的前进
 const go = () => {
   if (goIsDisable.value) {
     return
   }
   router.go(1)
 }
+// 判断是否禁用“后退”
+// 逻辑：如果当前 count 是 1，说明已经在“栈底”（首页），不能再退了
 const backIsDisable = computed(() => {
   return +route.query.count! === 1
 })
+// 判断是否禁用“前进”
+// 逻辑：如果当前 count 是最大值，说明已经在“栈顶”，不能再进了
 const goIsDisable = computed(() => {
   return +route.query.count! === flags.maxCount
 })
+//跳转到设置页面
 const gotoSetting = () => {
+  // 如果此时歌曲详情页是打开的，先关闭它
   flags.isOpenDetail = false
   router.push('/setting')
 }
 </script>
 
 <template>
+  <!--当搜索框打开时，给整个头部添加 no-drag，防止在输入搜索词时误触发窗口拖拽-->
   <div :class="['window-container', { 'no-drag': flags.isOpenSearch }]">
+    <!-- 左侧区域：包含前进后退和搜索框 标记为 no-drag 同样确保这些交互元素可点击，不触发拖拽-->
     <div class="left no-drag">
       <div class="flip">
         <el-icon :class="{ disable: backIsDisable }" @click="back"><ArrowLeft /></el-icon>
         <el-icon :class="{ disable: goIsDisable }" @click="go"><ArrowRight /></el-icon>
       </div>
+      <!-- 搜索组件 -->
       <Search />
     </div>
+    <!-- 中间区域：目前是空的，作为弹性布局的占位符 -->
     <div class="center no-drag"></div>
+    <!-- 右侧区域：包含设置按钮和窗口控制按钮。同样标记为 no-drag 以便点击。 -->
     <div class="right no-drag">
       <div class="operator">
         <div class="handler" @click="gotoSetting">
@@ -78,46 +92,44 @@ const gotoSetting = () => {
   width: 100%;
   padding-top: 30px;
   padding-bottom: 20px;
-  position: relative; // 子元素 的 z-index 小于父元素时，仍然显示在 父元素 上面: 父元素position:relative;z-index:1,子元素position:开启定位;z-index:10，就可以做到子元素在父元素之上了
+  position: relative; // 子元素 的 z-index 小于父元素时，仍然显示在 父元素 上面
   top: 0;
-  z-index: auto;
-  //background-color: $bgColor;
-  //border-bottom: 2px rgb(176,34,34) solid;
+  z-index: auto; //默认层级
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   .left {
     margin-right: 20%;
+    margin-left: 35px;
     display: flex;
     align-items: center;
-    //width: 0px;
-    //height: 30px;
-    //@extend .bgSetting;
-    //cursor: pointer;
-    margin-left: 35px;
+
     .flip {
       display: flex;
       align-items: center;
       margin-right: 15px;
       justify-content: space-between;
       width: 65px;
+
       .el-icon {
         cursor: pointer;
-        //background-color: rgba(255,255,255,0.01);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 8px;
         width: 27px;
         height: 37px;
         font-weight: 800;
-      }
-      .disable.el-icon {
-        cursor: default;
-        color: $moreDark;
+
+        &.disable {
+          cursor: default;
+          color: $moreDark;
+        }
       }
     }
   }
-  .center {
-  }
+
+  //.center {} // Removed empty .center
+
   .right {
     margin-right: 15px;
     display: flex;
@@ -127,7 +139,8 @@ const gotoSetting = () => {
       display: flex;
       align-items: center;
       position: relative;
-      z-index: 2001;
+      z-index: 2001; // 这里的层级很高，确保它永远在最上层，能够被点击
+
       .handler {
         display: flex;
         margin-right: 20px;
@@ -137,14 +150,18 @@ const gotoSetting = () => {
           color: rgb(30, 204, 148);
         }
       }
-      .iconfont.icon-weibiaoti- {
-        font-size: 25px;
-      }
-      .iconfont.icon-guanbi {
-        font-size: 14px;
-      }
-      .iconfont.icon-3zuidahua-1 {
-        font-size: 14px;
+      // [字体图标样式聚合]
+      // 这里进行了优化：把散落在外面的 .iconfont 具体类都收拢到了 .iconfont 内部
+      .iconfont {
+        &.icon-weibiaoti- {
+          font-size: 25px;
+        }
+        &.icon-guanbi {
+          font-size: 14px;
+        }
+        &.icon-3zuidahua-1 {
+          font-size: 14px;
+        }
       }
     }
   }

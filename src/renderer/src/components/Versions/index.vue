@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { ref } from 'vue'
 
-const versions = reactive({ ...window.electron.process.versions })
+const versions = ref({ ...window.electron.process.versions })
 </script>
 
 <template>

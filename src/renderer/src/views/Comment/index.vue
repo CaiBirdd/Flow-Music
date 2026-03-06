@@ -1,62 +1,70 @@
 ﻿<script setup lang="ts">
-import { calculateIsToday, formatDate, toggleImg } from '@/utils'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { toggleImg } from '@/utils'
+import { ref, watch } from 'vue'
 import { getCommentMusic, getMusicDetail, GetMusicDetailData } from '@/api/musicList'
 import { useRoute, useRouter } from 'vue-router'
 import { useFlags } from '@/store/flags'
 import Pagination from '@/components/Pagination/index.vue'
 
-interface State {
-  comments: any[]
-  song: GetMusicDetailData | null
-  total: number
-  pageSize: number
-  currentPage: number
+interface CommentData {
+  comments: any[] // 评论列表数据
+  song: GetMusicDetailData | null // 当前评论关联的歌曲详情
+  total: number // 评论总数
+  pageSize: number // 每页显示 20 条
+  currentPage: number // 当前页码
 }
 const flags = useFlags()
 const router = useRouter()
 const route = useRoute()
+// 当前页码
 const page = ref(1)
-const state: State = reactive({
+const commentData = ref<CommentData>({
   comments: [],
   song: null,
   total: 0,
   pageSize: 20,
   currentPage: 1
 })
+//路由中获取歌曲id
 let id = +route.query.id!
-const currentTab = ref<string>()
-const imgEl = ref<HTMLDivElement>()
-const bg = ref<string>('')
+const imgEl = ref<HTMLDivElement>() //背景图容器
+const bg = ref<string>('') //背景url
 
-onMounted(() => {
-  watch(bg, (val) => {
-    toggleImg(val).then((img) => {
-      imgEl.value!.style.backgroundImage = `url(${img.src})`
-    })
+// 监听封面图变化 填充到div中
+watch(bg, (val) => {
+  toggleImg(val).then((img) => {
+    if (imgEl.value) {
+      imgEl.value.style.backgroundImage = `url(${img.src})`
+    }
   })
 })
-const getCommentMusicFn = async (id: number, page: number) => {
+// 获取评论列表
+const fetchComments = async (id: number, page: number) => {
   const { data, code } = await getCommentMusic(id, 0, page, 20, 2)
   if (code === 200) {
-    state.comments = data.comments
-    state.total = data.totalCount
+    commentData.value.comments = data.comments
+    commentData.value.total = data.totalCount
   }
 }
+// 分页切换
 const currentChange = (page: number) => {
-  state.currentPage = page
-  getCommentMusicFn(id, page)
+  commentData.value.currentPage = page
+  fetchComments(id, page) // 加载新页评论
 }
-const getMusicDetailFn = async (id: number) => {
+
+// [API] 获取歌曲详情 (为了展示顶部的歌曲信息)
+const fetchMusicDetail = async (id: number) => {
   const { songs } = await getMusicDetail(String(id))
-  state.song = songs[0]
-  bg.value = state.song.al.picUrl
+  commentData.value.song = songs[0]
+  bg.value = commentData.value.song.al.picUrl
 }
+// 初始化函数
 function init() {
-  getCommentMusicFn(id, page.value)
-  getMusicDetailFn(id)
+  fetchComments(id, page.value)
+  fetchMusicDetail(id)
 }
 init()
+// [跳转] 点击用户头像/昵称，跳转到用户详情页
 const gotoUserDetail = (uid: number) => {
   flags.isOpenDetail = false
   router.push({
@@ -66,6 +74,7 @@ const gotoUserDetail = (uid: number) => {
     }
   })
 }
+// [路由监听] 如果用户在评论页切换了歌曲，需要重新加载数据
 watch(
   () => +route.query.id!,
   (value) => {
@@ -79,41 +88,49 @@ watch(
 
 <template>
   <div class="comment">
-    <div v-if="state.song !== null" class="comment-box">
+    <!-- 只有当歌曲信息加载完成后才显示整个区块 -->
+    <div v-if="commentData.song !== null" class="comment-box">
+      <!-- 1. 顶部信息区：封面 + 歌名 + 歌手 + 专辑 -->
       <div class="info">
         <div ref="imgEl" class="bg-img"></div>
         <div class="song-info">
-          <div class="song-name">{{ (state.song as GetMusicDetailData).name }}</div>
+          <div class="song-name">{{ commentData.song.name }}</div>
           <div class="singers">
             <div class="singer-info">
-              <span v-for="(item, index) in state.song.ar" :key="index"
-                >歌手:
-                {{
-                  item.name + (index < (state.song as GetMusicDetailData).ar.length - 1 ? '/' : '')
-                }}</span
+              <!-- 遍历歌手列表，用 '/' 分隔 -->
+              <span v-for="(item, index) in commentData.song.ar" :key="index"
+                >歌手: {{ item.name + (index < commentData.song.ar.length - 1 ? '/' : '') }}</span
               >
             </div>
-            <div class="album">专辑: {{ (state.song as GetMusicDetailData).al.name }}</div>
+            <div class="album">专辑: {{ commentData.song.al.name }}</div>
           </div>
         </div>
       </div>
+      <!-- 评论内容区 -->
       <div class="comment-content">
         <div class="comment-content-box">
           <div class="title">精彩评论</div>
+          <!-- @wheel.stop: 阻止滚轮事件冒泡 (你选择保留了这个特性) -->
           <div class="content" @wheel.stop>
-            <div v-for="item in state.comments" :key="item.id" class="content-line">
+            <!-- 评论列表循环 -->
+            <div v-for="item in commentData.comments" :key="item.id" class="content-line">
+              <!-- 用户头像 -->
               <div
                 :style="{ backgroundImage: `url(${item.user.avatarUrl})` }"
                 class="photo"
                 @click="gotoUserDetail(item.user.userId)"
               ></div>
               <div class="right-box">
+                <!-- 评论主体 -->
                 <div class="comment-text">
+                  <!-- 用户昵称 -->
                   <div class="name" @click="gotoUserDetail(item.user.userId)">
                     {{ item.user.nickname }}:
                   </div>
+                  <!-- 评论文本 -->
                   <div class="text">{{ item.content }}</div>
                 </div>
+                <!-- 底部数据栏 (时间、点赞、回复等) -->
                 <div class="handle-box">
                   <div class="time">{{ item.timeStr }}</div>
                   <div class="operation">
@@ -124,13 +141,15 @@ watch(
                   </div>
                 </div>
               </div>
+              <!-- 分割线 -->
               <div class="line"></div>
             </div>
           </div>
+          <!-- 3. 分页组件 -->
           <pagination
-            :total="state.total"
-            :page-size="state.pageSize"
-            :current-page="state.currentPage"
+            :total="commentData.total"
+            :page-size="commentData.pageSize"
+            :current-page="commentData.currentPage"
             @current-change="currentChange"
           />
         </div>
@@ -148,9 +167,6 @@ watch(
 .comment {
   height: 100%;
   width: 100%;
-  //position: fixed;
-  //transform: translateY(100%);
-  //background-color: $bgColor;
   .comment-box {
     padding: 0 0 0 35px;
     display: flex;
@@ -168,7 +184,6 @@ watch(
         .song-name {
           font-size: 30px;
           margin-bottom: 20px;
-          //margin-top: 10px;
         }
         .singers {
           display: flex;

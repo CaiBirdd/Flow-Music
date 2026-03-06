@@ -73,7 +73,8 @@ $bgColor: rgb(19, 19, 26); // 全局背景色
 // 主内容区域：宽度减去侧边栏宽度
 .main {
   height: 100%;
-  width: calc(100% - 230px);
+  flex: 1; // 让主内容区自动填充剩余空间，而不是手动计算（且之前算错了 5px）原：width：calc(100% - 240px)
+  min-width: 0; // 防止 flex 子项在某些情况下无法收缩
   z-index: auto;
   position: relative;
 }

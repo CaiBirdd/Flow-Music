@@ -15,6 +15,7 @@ export default defineConfig({
     css: {
       preprocessorOptions: {
         scss: {
+          // @ts-ignore
           api: 'modern-compiler',
           additionalData: `@use "@/assets/base.scss" as *;`
         }

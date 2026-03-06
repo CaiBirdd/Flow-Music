@@ -11,7 +11,7 @@ declare namespace NodeJS {
 
 declare global {
   interface Window {
-    $audio: MusicPlayerInstanceType
+    $audio: MusicPlayerInstanceType //$是提醒全局变量 别撞了名字
     $login: any
     electron: ElectronAPI
     electronAPI?: ElectronAPI

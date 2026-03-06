@@ -1,33 +1,35 @@
 <script setup lang="ts">
 import SongList from '@/components/SongList/index.vue'
-import { columns, playListMock } from './config'
-import usePlayList from '@/layout/BaseAside/usePlayList'
+import { columns } from './config'
+
 import { useMusicAction } from '@/store/music'
-import { getRecordSong } from '@/api/musicList'
+import { getRecordSong, GetMusicDetailData } from '@/api/musicList'
+import { useUserInfo } from '@/store'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
 
 const music = useMusicAction()
+const store = useUserInfo()
+
 const loading = ref(false)
-const recordSongList = ref([])
-const { getLikeMusicIds } = usePlayList()
+const recentSongs = ref<GetMusicDetailData[]>([])
 const ids = ref<number[]>([])
 
-const getRecordSongHandler = async () => {
+const getRecentSongs = async () => {
   try {
     loading.value = true
-    await getLikeMusicIds()
+    await store.refreshLikedSongs()
     const { data } = await getRecordSong()
 
     // 格式化成songList组件能够接受的数据格式
-    recordSongList.value = data.list.map((item) => {
-      ids.value.push(item.data.id)
+    const list = data.list.map((item) => {
       return {
         ...item,
         ...item.data
       }
     })
-    music.updateCurrentItem(playListMock)
+    recentSongs.value = list
+    ids.value = list.map((item) => item.id)
   } catch (e) {
     ElMessage.error(`获取最近歌曲失败: ${e}`)
   } finally {
@@ -36,7 +38,7 @@ const getRecordSongHandler = async () => {
 }
 
 const init = async () => {
-  getRecordSongHandler()
+  getRecentSongs()
 }
 
 init()
@@ -49,8 +51,8 @@ init()
   <SongList
     :columns="columns"
     :loading="loading"
-    :songs="music.state.songs"
-    :list="recordSongList"
+    :current-song="music.state.currentSong"
+    :list="recentSongs"
     :list-info="{}"
     :ids="ids"
     @play="music.getMusicUrlHandler"

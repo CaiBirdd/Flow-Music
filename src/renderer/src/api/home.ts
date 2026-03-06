@@ -1,6 +1,7 @@
 import request from '@/utils/request'
 import type { GetMusicDetailData } from '@/api/musicList'
 
+//轮播图类型定义 暂没用到
 export type Banner = {
   encodeId: string
   imageUrl: string
@@ -16,6 +17,7 @@ interface BannerRes {
   code: number
   banners: Array<Banner>
 }
+//推荐歌单类型定义 暂没用到
 interface PersonalizedRes {
   category: number
   code: number
@@ -34,6 +36,7 @@ interface PersonalizedRes {
     type: number
   }>
 }
+//每日推荐歌单类型定义 暂没用到
 export interface Recommend {
   alg: string
   copywriter: ''
@@ -53,12 +56,14 @@ export interface Recommend {
   type: number
   userId: number
 }
+//每日推荐歌单类型定义 登录后
 interface RecommendSongListRes {
   code: number
   featureFirst: boolean
   haveRcmdSongs: boolean
-  recommend: Array<Recommend>
+  recommend: Array<Recommend> // 包含推荐歌单列表
 }
+//每日推荐的歌曲类型定义 登录后
 interface RecommendSongRes {
   code: number
   data: {
@@ -69,18 +74,21 @@ interface RecommendSongRes {
     }>
   }
 }
-export const banner = () => request<null, BannerRes>('/banner')
+
+// 获取轮播图
+export const banner = () => request.get<BannerRes>('/banner')
 
 // 获取推荐歌单
-export const personalized = () => request<null, PersonalizedRes>('/personalized', 'get')
+export const personalized = () => request.get<PersonalizedRes>('/personalized')
 
-// 获取每日推荐歌单
-export const recommendSongList = () =>
-  request<null, RecommendSongListRes>('/recommend/resource', 'get')
+// 获取每日推荐歌单√
+export const recommendSongList = () => request.get<RecommendSongListRes>('/recommend/resource')
 
-// 获取每日推荐歌曲
-export const recommendSong = () => request<null, RecommendSongRes>('/recommend/songs', 'get')
+// 获取每日推荐歌曲√
+export const recommendSong = () => request.get<RecommendSongRes>('/recommend/songs')
 
-export const homepage = () => request('/homepage/block/page', 'get')
+// 获取首页数据
+export const homepage = () => request.get('/homepage/block/page')
 
-export const privatecontent = () => request('/personalized/privatecontent/list', 'get')
+// 获取独家放送
+export const privatecontent = () => request.get('/personalized/privatecontent/list')
